@@ -1,0 +1,7 @@
+Asunto de cada plantilla (pegar en Supabase → Authentication → Email Templates)
+
+confirmacion.html	Confirma tu correo para entrar a Reparte3
+invitacion.html	Te invitaron a Reparte3
+enlace_magico.html	Tu enlace para entrar a Reparte3
+recuperar.html	Cambia tu contraseña de Reparte3
+cambio_correo.html	Confirma tu nuevo correo en Reparte3

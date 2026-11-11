@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   X, FolderOpen, Check, Hand, Play, Ban, UploadCloud, CheckCheck, Pencil, Undo2, GitBranch, Link2, Trash2,
-  MessageSquare, Paperclip, History, Lock, UserPlus, ExternalLink,
+  MessageSquare, Paperclip, History, Lock, UserPlus, ExternalLink, Flag,
 } from 'lucide-react';
 import { useApp } from '../lib/store';
+import { PHASES, KINDS } from '../lib/plan';
 import { useActivity } from '../lib/hooks';
 import { displayStatus, STATUS, COLUMNS, ROLES, fmtShort, relDays, cap, ago, isPremium } from '../lib/format';
 import { go } from '../lib/router';
@@ -48,7 +49,7 @@ const PROMPTS = {
 const OK = { aceptar: 'Aceptaste la tarea.', rechazar: 'Avisaste a la coordinación.', tomar: 'Tomaste la tarea.', iniciar: 'Marcaste que empezaste.', bloquear: 'Avisaste del bloqueo al grupo.', desbloquear: 'Quitaste el bloqueo.', entregar: 'Entregaste para revisión.', aprobar: 'Aprobaste la entrega.', pedir_cambios: 'Pediste cambios.', reabrir: 'Reabriste la tarea.' };
 
 export default function TaskDrawer({ taskId, onClose }) {
-  const { tasks, uid, project, membersOf, nameOf, taskAction, updateTask, deleteTask, toast, loaded } = useApp();
+  const { tasks, checkpoints, uid, project, membersOf, nameOf, taskAction, updateTask, deleteTask, toast, loaded } = useApp();
   const open = !!taskId;
   const [shownId, setShownId] = useState(taskId);
   useEffect(() => { if (taskId) setShownId(taskId); }, [taskId]);
@@ -72,6 +73,7 @@ export default function TaskDrawer({ taskId, onClose }) {
   const act = async (action, note, url) => { const r = await taskAction(t.id, action, note, url); if (r) toast(OK[action]); return r; };
   const team = p ? membersOf(p.id).filter((m) => m.role !== 'docente') : [];
   const others = p ? tasks.filter((x) => x.project_id === p.id && x.id !== t.id) : [];
+  const cp = t?.checkpoint_id ? checkpoints.find((c) => c.id === t.checkpoint_id) : null;
   const st = t ? displayStatus(t) : 'todo';
 
   return (
@@ -158,6 +160,29 @@ export default function TaskDrawer({ taskId, onClose }) {
                       {others.map((o) => <option key={o.id} value={o.id}>#{o.seq} {o.title}</option>)}
                     </SelectField>
                   ) : <span className="flex items-center gap-2"><GitBranch className="h-3.5 w-3.5 text-fg-3" />{others.find((o) => o.id === t.depends_on)?.title || 'Otra tarea'}</span>}</dd>
+                </>}
+
+                {(t.kind || t.phase || t.origin === 'ia' || t.origin === 'formato') && <>
+                  <dt className="text-fg-2">Plan</dt>
+                  <dd className="flex flex-wrap items-center gap-1.5 text-[13px]">
+                    {t.kind && <span className={`rounded px-1.5 py-0.5 ring-1 ring-inset ${t.kind === 'sugerencia' ? 'text-violet ring-violet/30' : 'ring-line'}`}>{KINDS[t.kind]}</span>}
+                    {t.phase && PHASES[t.phase] && <span className="rounded px-1.5 py-0.5 ring-1 ring-inset ring-line">{PHASES[t.phase].label}</span>}
+                    {t.origin === 'ia' && <span className="text-fg-2">Propuesta con IA</span>}
+                    {t.origin === 'formato' && <span className="text-fg-2">Detectada por formato</span>}
+                    {t.source_line && <span className="text-fg-2">· línea {t.source_line} de la consigna</span>}
+                  </dd>
+                </>}
+                {t.checkpoint_id && cp && <>
+                  <dt className="text-fg-2">Checkpoint</dt>
+                  <dd className="flex items-center gap-1.5"><Flag className="h-3.5 w-3.5 text-fg-3" />{cp.title}, {fmtShort(cp.due_date)}</dd>
+                </>}
+                {t.done_criteria && <>
+                  <dt className="text-fg-2">Lista cuando</dt>
+                  <dd>{t.done_criteria}</dd>
+                </>}
+                {t.source_quote && <>
+                  <dt className="text-fg-2">Cita</dt>
+                  <dd className="italic text-fg-2">«{t.source_quote}»</dd>
                 </>}
 
                 {t.delivery_url && <>

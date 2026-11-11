@@ -13,6 +13,7 @@ export function AppProvider({ children }) {
   const [projects, setProjects] = useState([]);
   const [members, setMembers] = useState({});          // project_id -> [{ user_id, role, joined_at, profile }]
   const [tasks, setTasks] = useState([]);
+  const [checkpoints, setCheckpoints] = useState([]);
   const [notifs, setNotifs] = useState([]);
   const [loaded, setLoaded] = useState(false);
   const [toasts, setToasts] = useState([]);
@@ -57,19 +58,20 @@ export function AppProvider({ children }) {
     const projs = (mine || []).filter((m) => m.project).map((m) => ({ ...m.project, myRole: m.role }))
       .sort((a, b) => (a.status === b.status ? (a.due_date || '9999').localeCompare(b.due_date || '9999') : a.status === 'activo' ? -1 : 1));
     const ids = projs.map((p) => p.id);
-    let ms = [], ts = [];
+    let ms = [], ts = [], cs = [];
     if (ids.length) {
-      const [a, b] = await Promise.all([
+      const [a, b, c] = await Promise.all([
         supabase.from('memberships').select('project_id, user_id, role, joined_at, profile:profiles(display_name, level)').in('project_id', ids),
         supabase.from('tasks').select('*').in('project_id', ids).order('seq'),
+        supabase.from('checkpoints').select('*').in('project_id', ids).order('due_date'),
       ]);
       if (a.error || b.error) { fail(a.error || b.error); return; }
-      ms = a.data; ts = b.data;
+      ms = a.data; ts = b.data; cs = c.error ? [] : c.data;   // sin la migración V2, la app sigue funcionando sin checkpoints
     }
     const byProject = {};
     ms.forEach((m) => { (byProject[m.project_id] ||= []).push(m); });
     Object.values(byProject).forEach((l) => l.sort((x, y) => x.joined_at.localeCompare(y.joined_at)));
-    setProjects(projs); setMembers(byProject); setTasks(ts); setLoaded(true);
+    setProjects(projs); setMembers(byProject); setTasks(ts); setCheckpoints(cs); setLoaded(true);
   }, [uid, fail]);
 
   const loadNotifs = useCallback(async () => {
@@ -101,6 +103,7 @@ export function AppProvider({ children }) {
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'memberships' }, softReload)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'projects' }, softReload)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'checkpoints' }, softReload)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${uid}` }, (p) => {
         if (p.eventType === 'DELETE') { setNotifs((ns) => ns.filter((n) => n.id !== p.old.id)); return; }
         const n = p.new;
@@ -130,9 +133,21 @@ export function AppProvider({ children }) {
     reload: loadAll,
     reloadProfile: loadProfile,
     async createProject(f) {
-      const id = await run(() => supabase.rpc('create_project', { p_name: f.name, p_course: f.course || '', p_due: f.due || null, p_brief: f.brief || null, p_brief_file: f.briefFile || null, p_tasks: f.tasks || [] }));
+      const args = { p_name: f.name, p_course: f.course || '', p_due: f.due || null, p_brief: f.brief || null, p_brief_file: f.briefFile || null, p_tasks: f.tasks || [] };
+      if (f.expected) args.p_expected = f.expected;
+      const id = await run(() => supabase.rpc('create_project', args));
       if (id) await loadAll();
       return id;
+    },
+    async savePlan(projectId, cps, list) {
+      const n = await run(() => supabase.rpc('save_plan', { p_project: projectId, p_checkpoints: cps, p_tasks: list }));
+      if (n) await loadAll();
+      return n;
+    },
+    async releaseReserved(projectId) {
+      const n = await run(() => supabase.rpc('release_reserved', { p_project: projectId }));
+      if (n !== null) { await loadAll(); toast(n ? `Grupo cerrado: se repartieron ${n} tareas reservadas.` : 'Grupo cerrado.'); }
+      return n;
     },
     async updateProject(id, patch, msg) { const r = await run(() => supabase.from('projects').update(patch).eq('id', id).select().single(), msg); if (r) await loadAll(); return r; },
     async deleteProject(id) { const r = await run(() => supabase.from('projects').delete().eq('id', id), 'Proyecto eliminado.'); if (r) await loadAll(); return r; },
@@ -165,13 +180,13 @@ export function AppProvider({ children }) {
     async clearNotifs() { setNotifs([]); await supabase.from('notifications').delete().eq('user_id', uid); },
     async updateProfile(patch) { const r = await run(() => supabase.from('profiles').update(patch).eq('id', uid).select().single(), 'Perfil actualizado.'); if (r) setProfile(r); return r; },
     async createProfile(f) { const r = await run(() => supabase.from('profiles').insert({ id: uid, ...f }).select().single()); if (r) setProfile(r); return r; },
-    async signOut() { await supabase.auth.signOut(); setProjects([]); setTasks([]); setNotifs([]); setMembers({}); },
+    async signOut() { await supabase.auth.signOut(); setProjects([]); setTasks([]); setCheckpoints([]); setNotifs([]); setMembers({}); },
     async deleteAccount() { const r = await run(() => supabase.rpc('delete_my_account')); if (r !== null) { await supabase.auth.signOut(); } return r; },
     run,
-  }), [run, loadAll, loadProfile, uid]);
+  }), [run, loadAll, loadProfile, uid, toast]);
 
   const value = {
-    session, uid, profile, recovery, setRecovery, projects, members, tasks, notifs, loaded, online,
+    session, uid, profile, recovery, setRecovery, projects, members, tasks, checkpoints, notifs, loaded, online,
     toasts, toast, dismiss, fail, ...api,
     project: (id) => projects.find((p) => p.id === id),
     membersOf: (id) => members[id] || [],

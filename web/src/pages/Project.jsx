@@ -12,6 +12,62 @@ import { extractText } from '../lib/extract';
 import { Btn, Chip, Mono, Avatar, AvatarStack, UnderlineTabs, Segmented, Empty, Spinner, Modal, SelectField, IconBtn } from '../components/ui';
 import { ListView, BoardView } from '../components/TaskViews';
 import { Messages, Files, DropZone } from '../components/Chat';
+import Wizard from '../components/Wizard';
+import { followUp, TRACK } from '../lib/plan';
+
+/* ---------------- Seguimiento por checkpoints ---------------- */
+function FollowStrip({ p, role }) {
+  const { checkpoints, tasks, membersOf, uid, releaseReserved } = useApp();
+  const [busy, setBusy] = useState(false);
+  const cps = checkpoints.filter((c) => c.project_id === p.id);
+  const ts = tasks.filter((t) => t.project_id === p.id);
+  const team = membersOf(p.id).filter((m) => m.role !== 'docente');
+  const reserved = ts.filter((t) => t.reserved && !t.assignee && t.status !== 'lista');
+  if (!cps.length && !reserved.length) return null;
+  const f = followUp(cps, ts, team.map((m) => m.user_id), todayISO());
+  const missing = Math.max(0, (p.expected_members || 0) - team.length);
+  const people = team.filter((m) => f.byPerson[m.user_id]);
+  return (
+    <section className="mb-5 rounded-xl bg-card p-4 ring-1 ring-inset ring-line" aria-label="Seguimiento del plan">
+      {cps.length > 0 && <>
+        <div className="flex flex-wrap items-center gap-2">
+          <h3 className="text-[13.5px] font-semibold">Checkpoints</h3>
+          {f.group && <Chip tone={TRACK[f.group].tone}>Grupo: {TRACK[f.group].label}</Chip>}
+        </div>
+        <ol className="no-scrollbar mt-3 flex gap-2 overflow-x-auto">
+          {f.checkpoints.map((c) => (
+            <li key={c.id} className={`min-w-[150px] flex-1 rounded-lg p-2.5 ring-1 ring-inset ${c.status === 'atrasado' ? 'bg-red/[.05] ring-red/25' : c.status === 'riesgo' ? 'bg-amber/[.06] ring-amber/30' : 'ring-line'}`}>
+              <p className="flex items-center justify-between gap-2 text-[12px] text-fg-2"><span>{fmtShort(c.due_date)}</span><Mono>{c.done}/{c.tasks.length}</Mono></p>
+              <p className="mt-0.5 truncate text-[13px] font-medium" title={c.title}>{c.title}</p>
+              <p className={`mt-1 text-[11.5px] font-medium ${c.status === 'atrasado' ? 'text-red' : c.status === 'riesgo' ? 'text-amber' : 'text-fg-2'}`}>{TRACK[c.status].label}</p>
+            </li>
+          ))}
+        </ol>
+        {people.length > 0 && (
+          <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-[12.5px]">
+            {people.map((m) => (
+              <li key={m.user_id} className="flex items-center gap-1.5">
+                <Avatar name={m.profile?.display_name} me={m.user_id === uid} size="sm" ring="card" />
+                <span className="text-fg-2">{m.user_id === uid ? 'Tú' : m.profile?.display_name}:</span>
+                <span className={f.byPerson[m.user_id] === 'atrasado' ? 'font-medium text-red' : f.byPerson[m.user_id] === 'riesgo' ? 'font-medium text-amber' : 'text-fg'}>{TRACK[f.byPerson[m.user_id]].label}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+        <p className="mt-2 text-[11.5px] text-fg-3">En riesgo: algo sin empezar a 2 días del checkpoint o un bloqueo. Atrasado: pasó la fecha con tareas sin entregar.</p>
+      </>}
+      {reserved.length > 0 && (
+        <div className={`flex flex-wrap items-center gap-3 ${cps.length ? 'mt-4 border-t border-line pt-4' : ''}`}>
+          <p className="min-w-0 flex-1 text-[13px]">
+            <span className="font-medium text-accent">{reserved.length === 1 ? '1 tarea reservada' : `${reserved.length} tareas reservadas`}</span>
+            <span className="text-fg-2"> {missing > 0 ? `para ${missing === 1 ? 'la persona que falta' : `las ${missing} personas que faltan`}. Se asignan solas cuando entren.` : 'esperando a alguien más.'}</span>
+          </p>
+          {role === 'coordinador' && <Btn kind="secondary" size="sm" loading={busy} onClick={async () => { setBusy(true); await releaseReserved(p.id); setBusy(false); }}>Ya estamos todos: repartir</Btn>}
+        </div>
+      )}
+    </section>
+  );
+}
 
 /* ---------------- Tareas ---------------- */
 function AddTask({ p, coord, onDone }) {
@@ -47,7 +103,7 @@ function AddTask({ p, coord, onDone }) {
 function Distribute({ p, open, onClose }) {
   const { tasks, membersOf, updateTask, toast, uid } = useApp();
   const team = membersOf(p.id).filter((m) => m.role !== 'docente');
-  const ts = tasks.filter((t) => t.project_id === p.id);
+  const ts = tasks.filter((t) => t.project_id === p.id && !t.reserved);
   const [round, setRound] = useState(0);
   const [map, setMap] = useState({});
   const [busy, setBusy] = useState(false);
@@ -92,12 +148,24 @@ function TasksTab({ p, role, route }) {
   const [view, setView] = useLocal('r3-pview', 'lista');
   const [adding, setAdding] = useState(false);
   const [dist, setDist] = useState(false);
+  const [plan, setPlan] = useState(false);
   const ts = tasks.filter((t) => t.project_id === p.id);
   const coord = role === 'coordinador';
-  const unassigned = ts.filter((t) => !t.assignee && t.status !== 'lista').length;
+  const unassigned = ts.filter((t) => !t.assignee && !t.reserved && t.status !== 'lista').length;
   const canAdd = role !== 'docente' && p.status === 'activo';
   return (
     <div>
+      {coord && p.status === 'activo' && !ts.length && (
+        <section className="anim-enter mb-5 flex flex-wrap items-center gap-4 rounded-xl bg-accent/[.06] p-5 ring-1 ring-inset ring-accent/30">
+          <Sparkles className="h-6 w-6 shrink-0 text-accent" />
+          <div className="min-w-0 flex-1">
+            <h3 className="text-[15px] font-semibold">Arma el plan del grupo</h3>
+            <p className="mt-0.5 text-[13px] text-fg-2">Sube la consigna, conviértela en tareas con IA (gratis) y repártelas en partes iguales con checkpoints.</p>
+          </div>
+          <Btn kind="primary" onClick={() => setPlan(true)}>Subir consigna y repartir</Btn>
+        </section>
+      )}
+      <FollowStrip p={p} role={role} />
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <Segmented label="Vista" value={view} onChange={setView} options={[{ id: 'lista', label: 'Lista', icon: List }, { id: 'tablero', label: 'Tablero', icon: Columns3 }]} />
         <div className="flex flex-wrap gap-2">
@@ -110,6 +178,7 @@ function TasksTab({ p, role, route }) {
         ? <ListView tasks={ts} selectedId={route.query.tarea} empty={<Empty icon={ListChecks} title="Este proyecto aún no tiene tareas" text={coord ? 'Añádelas a mano o súbelas desde la consigna.' : 'La coordinación todavía no reparte el trabajo.'}>{canAdd && <Btn kind="primary" onClick={() => setAdding(true)}><Plus className="h-4 w-4" />Añadir tarea</Btn>}</Empty>} />
         : <BoardView tasks={ts} selectedId={route.query.tarea} />}
       {coord && <Distribute p={p} open={dist} onClose={() => setDist(false)} />}
+      {coord && <Wizard open={plan} projectId={p.id} onClose={() => setPlan(false)} />}
     </div>
   );
 }

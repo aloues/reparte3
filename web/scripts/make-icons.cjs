@@ -14,8 +14,8 @@ const chunk = (type, data) => {
   return Buffer.concat([len, td, c]);
 };
 
-function png(size, maskable) {
-  const radius = maskable ? 0 : (size * 14) / 64;
+function png(size, maskable, square) {
+  const radius = maskable || square ? 0 : (size * 14) / 64;  // iOS redondea solo: el apple-touch-icon va cuadrado y opaco
   const pad = maskable ? size * 0.14 : 0;
   const k = (size - 2 * pad) / 64;
   const bars = [[21, 16, 20, 8], [27, 28, 14, 8], [21, 40, 20, 8], [35, 16, 8, 32]];
@@ -47,4 +47,5 @@ const out = path.join(__dirname, '..', 'public');
 fs.writeFileSync(path.join(out, 'icon-192.png'), png(192));
 fs.writeFileSync(path.join(out, 'icon-512.png'), png(512));
 fs.writeFileSync(path.join(out, 'icon-maskable-512.png'), png(512, true));
+fs.writeFileSync(path.join(out, 'apple-touch-icon.png'), png(180, false, true));
 console.log('Íconos generados en public/');

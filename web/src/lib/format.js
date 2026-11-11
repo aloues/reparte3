@@ -44,7 +44,7 @@ export function displayStatus(t, today = todayISO()) {
   if (t.status === 'bloqueada') return 'blocked';
   if (t.due_date && t.due_date < today && t.status !== 'en_revision') return 'overdue';
   if (t.status === 'en_revision') return 'review';
-  if (!t.assignee) return 'unassigned';
+  if (!t.assignee) return t.reserved ? 'reserved' : 'unassigned';
   if (!t.accepted) return 'accept';
   if (t.status === 'en_curso') return 'progress';
   return 'todo';
@@ -57,7 +57,8 @@ export const STATUS = {
   progress:   { label: 'En curso',    dot: 'bg-fg-2',   badge: 'bg-hov2 text-fg ring-line' },
   todo:       { label: 'Pendiente',   dot: 'ring-[1.5px] ring-inset ring-fg-3', badge: 'bg-hov text-fg-2 ring-line' },
   unassigned: { label: 'Sin asignar', dot: 'border border-dashed border-fg-3', badge: 'text-fg-2 ring-line' },
-  done:       { label: 'Lista',       dot: 'bg-fg-3',   badge: 'bg-hov text-fg-2 ring-line' },
+  reserved:   { label: 'Reservada',   dot: 'border border-dashed border-accent', badge: 'text-accent ring-accent/30' },
+  done:      { label: 'Lista',       dot: 'bg-fg-3',   badge: 'bg-hov text-fg-2 ring-line' },
 };
 export const COLUMNS = [
   { id: 'pendiente', label: 'Pendiente', dot: 'todo' },
@@ -72,6 +73,7 @@ export const GROUPS = [
   { id: 'review', label: 'En revisión', st: 'review', test: (s) => s === 'review' },
   { id: 'progress', label: 'En curso', st: 'progress', test: (s) => s === 'progress' },
   { id: 'todo', label: 'Pendientes', st: 'todo', test: (s) => s === 'todo' || s === 'unassigned' },
+  { id: 'reserved', label: 'Reservadas para quienes faltan', st: 'reserved', test: (s) => s === 'reserved' },
   { id: 'done', label: 'Completadas', st: 'done', test: (s) => s === 'done', closed: true },
 ];
 export const ROLES = {

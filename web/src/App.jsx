@@ -12,6 +12,7 @@ import { Avatar, Mono, IconBtn } from './components/ui';
 import NotificationsPanel from './components/Notifications';
 import TaskDrawer from './components/TaskDrawer';
 import Wizard from './components/Wizard';
+import InstallHint from './components/InstallHint';
 import { AuthPage, Onboarding, ResetPassword, SetupScreen, Splash } from './pages/Auth';
 import Dashboard from './pages/Dashboard';
 import ProjectsPage from './pages/Projects';
@@ -258,7 +259,7 @@ function Shell({ route, theme, setTheme }) {
               </div>
             </div>
           </header>
-          <main id="main" tabIndex={-1} className="gutter mx-auto max-w-[1280px] pb-24 pt-6 outline-none lg:pt-8">{page}</main>
+          <main id="main" tabIndex={-1} className="gutter mx-auto max-w-[1280px] pb-24 pt-6 outline-none lg:pt-8"><InstallHint />{page}</main>
         </div>
       </div>
       <TaskDrawer taskId={taskId} onClose={closeTask} />

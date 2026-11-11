@@ -65,6 +65,55 @@ select vault.create_secret('PEGA_AQUI_PUSH_CRON_SECRET', 'push_secret');
 
 El cron `reparte3-push` revisa cada minuto si hay avisos nuevos y llama a la función. El cron `reparte3-recordatorios` genera los recordatorios cada 15 minutos entre las 08:00 y las 20:00, hora de Lima.
 
+## 3b. Planificación con IA dentro de la app
+
+La coordinación pulsa «Planificar con IA» y la app llama a la IA desde el servidor (Edge Function `analizar-consigna`). La persona nunca sale de Reparte3. Las claves viven solo en Supabase.
+
+Hay una **cadena de proveedores**: se usa el primero que tenga clave y responda (orden en `R3_AI_ORDER`, por defecto `claude,groq,gemini`). Basta con **una** clave para que funcione. La comparación completa está en `docs/OPCIONES_IA.md`.
+
+**Opción gratis (recomendada para empezar): Groq**
+1. Entra a <https://console.groq.com>, crea la cuenta, ve a **API Keys → Create API Key** y copia la clave (empieza con `gsk_`).
+2. En Supabase: **Edge Functions → Secrets → Add new secret**. Nombre `GROQ_API_KEY`, valor: la clave.
+
+**Respaldo gratis: Gemini**
+1. Entra a <https://aistudio.google.com>, elige **Get API key → Create API key** y cópiala.
+2. Guárdala en Supabase como `GEMINI_API_KEY`.
+3. En la capa gratuita, Google puede usar los datos para mejorar sus productos. La app ya avisa que la consigna se envía a un servicio de IA.
+
+**De pago, mejor calidad: Claude.** Sigue los pasos de abajo.
+
+1. **Cuenta de API:** entra a <https://console.anthropic.com> con el correo del proyecto.
+   - La suscripción Claude Pro **no** incluye la API: es otra cuenta y se paga por uso.
+   - Carga el saldo mínimo que pida la consola.
+   - En **Limits**, pon un **límite de gasto mensual** bajo (por ejemplo, el mismo monto que cargaste).
+2. **API Keys → Create Key** (nombre: `reparte3-produccion`). Copia la clave: empieza con `sk-ant-`.
+3. **Guarda la clave en Supabase**, sin pegarla en archivos del repositorio:
+   ```bash
+   npx supabase@2.122.0 secrets set ANTHROPIC_API_KEY=sk-ant-...
+   ```
+   O hazlo en el panel: **Edge Functions → Secrets → Add new secret**.
+4. **Despliega la función:**
+   ```bash
+   npx supabase@2.122.0 functions deploy analizar-consigna
+   ```
+5. **Ajustes opcionales** (secretos):
+
+   | Secreto | Por defecto | Para qué sirve |
+   |---|---|---|
+   | `R3_AI_MODEL` | `claude-opus-5-5` | `claude-haiku-5-5` gasta mucho menos |
+   | `R3_AI_EFFORT` | `medium` | Esfuerzo de razonamiento |
+   | `R3_AI_PER_PROJECT_DAY` | `5` | Análisis por proyecto cada 24 h |
+   | `R3_AI_MONTHLY_MAX` | `300` | Tope de análisis al mes |
+
+**Costo estimado** (se mide de verdad en `public.ai_usage` y en Administración):
+
+| Modelo | Precio por millón de tokens | Costo por consigna de unos 8k tokens de entrada y 3k de salida |
+|---|---|---|
+| Claude Opus 5.5 | USD 4 entrada / USD 20 salida | ~USD 0.07–0.15 |
+| Claude Haiku 5.5 | USD 0.10 / USD 0.50 | menos de USD 0.01 |
+
+Sin clave, o si se pasa un límite, la app lo dice en una línea y ofrece la **detección rápida por formato**.
+
 ## 4. Hacerte administrador
 
 Primero crea tu cuenta en la app. Después ejecuta esto en el **SQL Editor**:
