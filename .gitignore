@@ -1,0 +1,17 @@
+# El repositorio público solo incluye la app V1 (web/), el servidor (supabase/), el flujo de publicación
+# y la guía. Los materiales del curso, la app local y los documentos internos quedan fuera.
+/*
+!/.gitignore
+!/web/
+!/supabase/
+!/.github/
+!/DESPLIEGUE.md
+
+web/node_modules/
+web/dist/
+web/.env
+web/.env.local
+supabase/.secrets.local
+supabase/.temp/
+supabase/.branches/
+supabase/.env

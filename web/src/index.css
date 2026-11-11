@@ -1,0 +1,87 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Grises neutros (zinc). Un solo acento azul eléctrico, igual en ambos temas. Sin verdes. */
+:root {
+  --side: 249 250 251; --canvas: 255 255 255; --card: 255 255 255; --sunk: 249 250 251;
+  --fg: 9 9 11; --fg-2: 82 82 91; --fg-3: 161 161 170;
+  --line: 229 231 235; --line-a: 1;
+  --hov: 244 244 245; --hov-a: 1; --hov2: 228 228 231; --hov2-a: 1;
+  --accent: 43 89 255; --on-accent: 255 255 255;
+  --overlay: 9 9 11; --overlay-a: .28;
+  --red: 220 38 38; --orange: 234 88 12; --amber: 180 83 9; --violet: 124 58 237; --ok: 82 82 91;
+  --shadow: 9 9 11; --shadow-a: .10;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --side: 9 9 11; --canvas: 14 14 16; --card: 24 24 27; --sunk: 9 9 11;
+    --fg: 250 250 250; --fg-2: 161 161 170; --fg-3: 113 113 122;
+    --line: 255 255 255; --line-a: .1;
+    --hov: 255 255 255; --hov-a: .05; --hov2: 255 255 255; --hov2-a: .09;
+    --overlay: 0 0 0; --overlay-a: .6;
+    --red: 248 113 113; --orange: 251 146 60; --amber: 251 191 36; --violet: 167 139 250; --ok: 161 161 170;
+    --shadow: 0 0 0; --shadow-a: .55;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --side: 9 9 11; --canvas: 14 14 16; --card: 24 24 27; --sunk: 9 9 11;
+  --fg: 250 250 250; --fg-2: 161 161 170; --fg-3: 113 113 122;
+  --line: 255 255 255; --line-a: .1;
+  --hov: 255 255 255; --hov-a: .05; --hov2: 255 255 255; --hov2-a: .09;
+  --overlay: 0 0 0; --overlay-a: .6;
+  --red: 248 113 113; --orange: 251 146 60; --amber: 251 191 36; --violet: 167 139 250; --ok: 161 161 170;
+  --shadow: 0 0 0; --shadow-a: .55;
+  color-scheme: dark;
+}
+
+html, body { background: rgb(var(--canvas)); color: rgb(var(--fg)); font-family: Geist, Inter, system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; -webkit-text-size-adjust: 100%; }
+@media (min-width: 1024px) { html, body { background: rgb(var(--side)); } }
+body { margin: 0; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: rgb(var(--canvas)); }
+svg.lucide { stroke-width: 1.75px; }
+.sw-bold svg.lucide, svg.lucide.sw-bold { stroke-width: 2.4px; }
+:focus-visible { outline: 2px solid rgb(var(--accent)); outline-offset: 2px; }
+::selection { background: rgb(var(--accent) / .25); }
+.gutter { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+@media (min-width: 640px) { .gutter { padding-left: max(28px, env(safe-area-inset-left, 0px)); padding-right: max(28px, env(safe-area-inset-right, 0px)); } }
+@media (min-width: 1024px) { .gutter { padding-left: 40px; padding-right: 40px; } }
+.no-scrollbar { scrollbar-width: none; } .no-scrollbar::-webkit-scrollbar { display: none; }
+/* En la capa de componentes, para que las utilidades (pl-9, h-11, w-24…) puedan ajustarlos. */
+@layer components {
+  .field { @apply h-10 w-full rounded-xl bg-card px-3.5 text-[14px] text-fg outline-none ring-1 ring-inset ring-line transition-all placeholder:text-fg-3 hover:ring-fg-3/50 focus:ring-2 focus:ring-accent/60; }
+  textarea.field { @apply h-auto py-2.5 leading-relaxed; }
+  select.field { @apply appearance-none pr-9; }
+  .label { @apply text-[13px] font-medium text-fg; }
+}
+
+@keyframes enter { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.anim-enter { animation: enter .3s cubic-bezier(.2,.8,.2,1) both; }
+@keyframes scalein { from { opacity: 0; transform: translateY(8px) scale(.97); } to { opacity: 1; transform: none; } }
+.anim-scale { animation: scalein .26s cubic-bezier(.2,.8,.2,1) both; }
+@keyframes toastin { from { opacity: 0; transform: translateY(10px) scale(.98); } to { opacity: 1; transform: none; } }
+.anim-toast { animation: toastin .24s cubic-bezier(.2,.8,.2,1) both; }
+.toast-bar { animation: bar 5s linear forwards; transform-origin: left; }
+.toast:hover .toast-bar, .toast:focus-within .toast-bar { animation-play-state: paused; }
+@keyframes bar { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+@keyframes scan { 0% { transform: translateY(-60%); } 100% { transform: translateY(260%); } }
+.scan { animation: scan 1.4s cubic-bezier(.45,0,.55,1) infinite; }
+@keyframes draw { to { stroke-dashoffset: 0; } }
+.draw-circle { stroke-dasharray: 152; stroke-dashoffset: 152; animation: draw .6s cubic-bezier(.65,0,.35,1) .05s forwards; }
+.draw-check { stroke-dasharray: 30; stroke-dashoffset: 30; animation: draw .35s cubic-bezier(.65,0,.35,1) .55s forwards; }
+@keyframes halo { 0% { transform: scale(.8); opacity: .5; } 100% { transform: scale(1.7); opacity: 0; } }
+.halo { animation: halo 1.2s ease-out .5s 2 both; }
+@keyframes pop { 0% { transform: scale(.6); } 60% { transform: scale(1.15); } 100% { transform: scale(1); } }
+.pop { animation: pop .35s cubic-bezier(.2,.8,.2,1); }
+@keyframes ring { 0%, 100% { transform: rotate(0); } 20% { transform: rotate(14deg); } 40% { transform: rotate(-12deg); } 60% { transform: rotate(8deg); } 80% { transform: rotate(-4deg); } }
+.ring-bell { animation: ring .8s ease-in-out; transform-origin: 50% 10%; }
+@keyframes shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+.sk { background: linear-gradient(90deg, rgb(var(--fg) / .05) 0%, rgb(var(--fg) / .10) 50%, rgb(var(--fg) / .05) 100%); background-size: 200% 100%; animation: shimmer 1.2s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+  .toast-bar { animation-duration: 5s !important; }
+  .scan, .sk { animation: none !important; }
+}
