@@ -36,6 +36,7 @@ async function clickText(page, text, tag = 'button') {
   }, text, tag);
   if (!done) throw new Error(`No encontré «${text}»`);
 }
+const toTab = (page, tab) => page.evaluate((t) => { location.hash = location.hash.replace(/(#\/p\/[^/?]+).*/, `$1/${t}`); }, tab);
 const waitText = (page, text, timeout = 20000) => page.waitForFunction((t) => document.body.innerText.includes(t), { timeout }, text);
 
 async function person(browser, label, mobile = false) {
@@ -48,7 +49,7 @@ async function person(browser, label, mobile = false) {
   return page;
 }
 async function register(page, name) {
-  await page.goto(BASE, { waitUntil: 'networkidle0' });
+  await page.goto(BASE + '#/entrar', { waitUntil: 'networkidle0' });
   await clickText(page, 'Créala');
   await setValue(page, '#au-name', name);
   await setValue(page, '#au-email', `${name.split(' ')[0].toLowerCase()}-${run}@test.local`);
@@ -63,6 +64,7 @@ async function join(page, link) {
   await waitText(page, 'Unirme al grupo');
   await clickText(page, 'Unirme al grupo');
   await page.waitForFunction(() => location.hash.includes('/p/'), { timeout: 20000 });
+  await toTab(page, 'tareas');
 }
 
 const browser = await puppeteer.launch({ executablePath: CHROME, headless: 'new', args: ['--no-sandbox', '--lang=es-PE'] });
@@ -123,7 +125,11 @@ try {
   ok(await A.evaluate(() => document.body.innerText.includes('Reservado (2)')), 'la parte de las 2 personas que faltan queda reservada');
   await shot(A, 'reparto');
   await clickText(A, 'Confirmar y repartir');
-  await A.waitForFunction(() => location.hash.includes('/p/') && document.body.innerText.includes('Checkpoints'), { timeout: 20000 });
+  await A.waitForFunction(() => location.hash.includes('/p/') && document.body.innerText.includes('Siguiente paso del proyecto'), { timeout: 20000 });
+  ok(true, 'al confirmar, el proyecto abre en Resumen con el siguiente paso');
+  await shot(A, 'proyecto_resumen');
+  await toTab(A, 'tareas');
+  await waitText(A, 'Checkpoints');
   ok(await A.evaluate(() => /\d+ tareas reservadas/.test(document.body.innerText)), 'el proyecto muestra checkpoints y tareas reservadas');
   await shot(A, 'proyecto_checkpoints');
 
@@ -149,6 +155,7 @@ try {
   await register(D, 'Dani Flores');
   await join(D, link);
   await A.reload({ waitUntil: 'networkidle0' });
+  await toTab(A, 'tareas');
   await waitText(A, 'Checkpoints');
   ok(await A.evaluate(() => !/\d+ tareas reservadas/.test(document.body.innerText)), 'con los 4 dentro ya no queda nada reservado');
   await shot(A, 'proyecto_completo');

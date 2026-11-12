@@ -18,6 +18,7 @@ const errors = [];
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const shot = async (page, name) => { await sleep(600); await page.screenshot({ path: path.join(SHOTS, `movil_${name}.png`) }); console.log(`  captura movil_${name}`); };
 const ok = (c, m) => { console.log(`${c ? '✓' : '✗'} ${m}`); if (!c) errors.push(m); };
+const toTab = (page, tab) => page.evaluate((t) => { location.hash = location.hash.replace(/(#\/p\/[^/?]+).*/, `$1/${t}`); }, tab);
 const waitText = (page, text, timeout = 20000) => page.waitForFunction((t) => document.body.innerText.includes(t), { timeout }, text);
 
 async function setValue(page, sel, value) {
@@ -73,7 +74,7 @@ async function person(browser, label) {
   return page;
 }
 async function register(page, name) {
-  await page.goto(BASE, { waitUntil: 'networkidle0' });
+  await page.goto(BASE + '#/entrar', { waitUntil: 'networkidle0' });
   await tap(page, 'Créala');
   await setValue(page, '#au-name', name);
   await setValue(page, '#au-email', `${name.split(' ')[0].toLowerCase()}-m${run}@test.local`);
@@ -88,6 +89,7 @@ async function join(page, link) {
   await tap(page, 'Unirme al grupo');
   await page.waitForFunction(() => location.hash.includes('/p/'), { timeout: 20000 });
   await page.reload({ waitUntil: 'networkidle0' });
+  await toTab(page, 'tareas');
 }
 
 const browser = await puppeteer.launch({ executablePath: CHROME, headless: 'new', args: ['--no-sandbox', '--lang=es-PE'] });
@@ -124,6 +126,7 @@ try {
   await shot(A, 'w3_reparto_llega_beto');
   await tap(A, 'Confirmar y repartir');
   await A.waitForFunction(() => location.hash.includes('/p/') && !document.querySelector('[aria-labelledby="wz-title"]'), { timeout: 20000 });
+  await toTab(A, 'tareas');
   ok(true, 'en el celular se puede tocar «Confirmar y repartir» aunque llegue un aviso en ese momento');
 
   console.log('\nBeto acepta la lista completa de un toque');
@@ -150,6 +153,7 @@ try {
   ok(true, `Caro rechaza «${first.slice(0, 30)}…» con motivo desde el celular`);
   await C.keyboard.press('Escape');
   await C.goto(C.url().split('?')[0], { waitUntil: 'networkidle0' });
+  await toTab(C, 'tareas');
 
   console.log('\nAna abre «Repartir» y, mientras tanto, le llegan avisos (Caro acepta su lista)');
   await A.reload({ waitUntil: 'networkidle0' });

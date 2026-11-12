@@ -19,10 +19,16 @@ export function useMessages(projectId, taskId) {
         if ((m.task_id || null) !== (taskId || null)) return;
         setMsgs((l) => (l && !l.some((x) => x.id === m.id) ? [...l, m] : l));
       })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages', filter: `project_id=eq.${projectId}` }, (p) => setMsgs((l) => l && l.map((x) => (x.id === p.new.id ? { ...x, ...p.new } : x))))
       .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'messages' }, (p) => setMsgs((l) => l && l.filter((x) => x.id !== p.old.id)))
       .subscribe();
     return () => { alive = false; supabase.removeChannel(ch); };
   }, [projectId, taskId]);
+  const pin = useCallback(async (id, pinned) => {
+    const { error } = await supabase.from('messages').update({ pinned }).eq('id', id);
+    if (error) throw error;
+    setMsgs((l) => l && l.map((x) => (x.id === id ? { ...x, pinned } : x)));
+  }, []);
 
   const send = useCallback(async (body) => {
     const { data, error } = await supabase.from('messages').insert({ project_id: projectId, task_id: taskId || null, body }).select().single();
@@ -34,7 +40,51 @@ export function useMessages(projectId, taskId) {
     if (error) throw error;
     setMsgs((l) => l && l.filter((x) => x.id !== id));
   }, []);
-  return { msgs, send, remove };
+  return { msgs, send, remove, pin };
+}
+
+/** Enlaces del proyecto (Docs, Sheets, Slides, Drive, web), en tiempo real. */
+export function useLinks(projectId) {
+  const [links, setLinks] = useState(null);
+  const load = useCallback(async () => {
+    if (!projectId) return;
+    const { data, error } = await supabase.from('project_links').select('*').eq('project_id', projectId).order('created_at', { ascending: false });
+    setLinks(error ? [] : data || []);
+  }, [projectId]);
+  useEffect(() => {
+    if (!projectId) return undefined;
+    setLinks(null); load();
+    const ch = supabase.channel(chanId(`links-${projectId}`))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'project_links', filter: `project_id=eq.${projectId}` }, load)
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [projectId, load]);
+  const add = useCallback(async (f) => {
+    const { data: u } = await supabase.auth.getUser();
+    const { error } = await supabase.from('project_links').insert({ project_id: projectId, url: f.url, title: f.title || '', task_id: f.task_id || null, source: f.source || 'manual', added_by: u.user.id });
+    if (error) throw error;
+    await load();
+  }, [projectId, load]);
+  const update = useCallback(async (id, patch) => { const { error } = await supabase.from('project_links').update(patch).eq('id', id); if (error) throw error; await load(); }, [load]);
+  const remove = useCallback(async (id) => { const { error } = await supabase.from('project_links').delete().eq('id', id); if (error) throw error; await load(); }, [load]);
+  return { links, add, update, remove, reload: load };
+}
+
+/** URL firmada (2 min) de un archivo privado del proyecto, para el visor. */
+export function useSignedUrl(path) {
+  const [url, setUrl] = useState(null);
+  const [error, setError] = useState('');
+  useEffect(() => {
+    let alive = true;
+    setUrl(null); setError('');
+    if (!path) return undefined;
+    supabase.storage.from('archivos').createSignedUrl(path, 600).then(({ data, error: e }) => {
+      if (!alive) return;
+      if (e) setError(e.message); else setUrl(data.signedUrl);
+    });
+    return () => { alive = false; };
+  }, [path]);
+  return { url, error };
 }
 
 /** Archivos privados del proyecto (o de una tarea) en Supabase Storage. */
@@ -75,14 +125,15 @@ export function useFiles(projectId, taskId) {
   return { files, upload, remove, open, reload: load };
 }
 
-export function useActivity(projectId, taskId) {
+/** Actividad del proyecto o de una tarea. `version` cambia cuando cambia algo del proyecto y fuerza una nueva lectura. */
+export function useActivity(projectId, taskId, limit = 60, version = 0) {
   const [items, setItems] = useState(null);
   useEffect(() => {
     if (!projectId) return;
-    let q = supabase.from('activity').select('*').eq('project_id', projectId).order('created_at', { ascending: false }).limit(60);
+    let q = supabase.from('activity').select('*').eq('project_id', projectId).order('created_at', { ascending: false }).limit(limit);
     q = taskId ? q.eq('task_id', taskId) : q;
     q.then(({ data }) => setItems(data || []));
-  }, [projectId, taskId]);
+  }, [projectId, taskId, limit, version]);
   return items;
 }
 

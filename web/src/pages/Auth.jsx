@@ -38,14 +38,14 @@ function Feature({ icon: I, title, text }) {
   );
 }
 
-export function AuthPage({ theme, setTheme }) {
-  const [mode, setMode] = useState('login');
+export function AuthPage({ theme, setTheme, initialMode = 'login' }) {
+  const [mode, setMode] = useState(initialMode);
   const [f, setF] = useState({ name: '', email: '', password: '', birth: '', level: 'universidad', terms: false });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [sent, setSent] = useState('');
-  let invited = false;
-  try { invited = !!sessionStorage.getItem('r3-join'); } catch (e) { /* nada */ }
+  let invited = false; let deep = false;
+  try { invited = !!sessionStorage.getItem('r3-join'); deep = /tarea=/.test(sessionStorage.getItem('r3-next') || ''); } catch (e) { /* nada */ }
   const set = (k) => (e) => setF({ ...f, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value });
 
   const submit = async (e) => {
@@ -94,7 +94,7 @@ export function AuthPage({ theme, setTheme }) {
 
       <section className="gutter flex min-h-[100dvh] flex-col py-6 lg:py-10">
         <div className="flex items-center justify-between">
-          <span className="flex items-center gap-2.5 lg:invisible"><img src="./icon.svg" alt="" className="h-7 w-7" /><span className="text-[16px] font-semibold">Reparte3</span></span>
+          <a href="#/" className="flex items-center gap-2 rounded-lg text-[13.5px] text-fg-2 hover:text-fg"><ArrowLeft className="h-4 w-4" />Volver al inicio</a>
           <button type="button" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} aria-label={theme === 'dark' ? 'Tema claro' : 'Tema oscuro'} className="grid h-9 w-9 place-items-center rounded-lg text-fg-2 hover:bg-hov hover:text-fg">
             {theme === 'dark' ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
           </button>
@@ -111,7 +111,7 @@ export function AuthPage({ theme, setTheme }) {
             <form onSubmit={submit} className="anim-enter flex flex-col gap-4" noValidate>
               <div className="mb-2">
                 <h1 className="text-[24px] font-semibold tracking-[-0.025em]">{mode === 'login' ? 'Inicia sesión' : mode === 'register' ? 'Crea tu cuenta' : 'Recupera tu contraseña'}</h1>
-                <p className="mt-1.5 text-[14px] text-fg-2">{invited ? 'Te invitaron a un grupo. Entra o crea tu cuenta para unirte.' : mode === 'register' ? 'Gratis. Toma menos de un minuto.' : mode === 'login' ? 'Qué bueno verte de nuevo.' : 'Te enviaremos un enlace a tu correo.'}</p>
+                <p className="mt-1.5 text-[14px] text-fg-2">{invited ? 'Te invitaron a un grupo. Entra o crea tu cuenta para unirte.' : deep ? 'Entra para revisar la tarea que te asignaron.' : mode === 'register' ? 'Gratis. Toma menos de un minuto.' : mode === 'login' ? 'Qué bueno verte de nuevo.' : 'Te enviaremos un enlace a tu correo.'}</p>
               </div>
               {mode === 'register' && (
                 <div className="flex flex-col gap-1.5"><label htmlFor="au-name" className="label">Nombre y apellido</label>

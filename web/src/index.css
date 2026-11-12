@@ -93,3 +93,72 @@ svg.lucide { stroke-width: 1.75px; }
 .safe-modal-box {
   max-height: calc(100dvh - max(16px, env(safe-area-inset-top)) - max(16px, env(safe-area-inset-bottom)));
 }
+
+/* ===================== V3: estados del Flujo (paleta viva) =====================
+   Una familia de color con la misma intensidad que el azul de marca (#2B59FF):
+   esmeralda = lista y aprobada, ámbar = en curso o en revisión, zinc = pendiente,
+   rosa = bloqueada; «vencida» es rosa con trama para distinguir retraso de bloqueo.
+   Cada nodo lleva una franja de color, un fondo teñido y su estado escrito en una etiqueta. */
+:root {
+  --st-done: 16 185 129; --st-progress: 245 158 11; --st-todo: 113 113 122; --st-blocked: 244 63 94;
+  --st-done-bg: 220 252 238; --st-progress-bg: 255 243 205; --st-todo-bg: 244 244 245; --st-blocked-bg: 255 228 232;
+  --st-done-ink: 4 120 87; --st-progress-ink: 251 191 36; --st-todo-ink: 113 113 122; --st-blocked-ink: 225 29 72;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --st-done: 52 211 153; --st-progress: 251 191 36; --st-todo: 161 161 170; --st-blocked: 251 113 133;
+    --st-done-bg: 6 60 45; --st-progress-bg: 66 45 6; --st-todo-bg: 39 39 42; --st-blocked-bg: 72 12 28;
+    --st-done-ink: 5 150 105; --st-progress-ink: 251 191 36; --st-todo-ink: 82 82 91; --st-blocked-ink: 225 29 72;
+  }
+}
+:root[data-theme="dark"] {
+  --st-done: 52 211 153; --st-progress: 251 191 36; --st-todo: 161 161 170; --st-blocked: 251 113 133;
+  --st-done-bg: 6 60 45; --st-progress-bg: 66 45 6; --st-todo-bg: 39 39 42; --st-blocked-bg: 72 12 28;
+  --st-done-ink: 5 150 105; --st-progress-ink: 251 191 36; --st-todo-ink: 82 82 91; --st-blocked-ink: 225 29 72;
+}
+.flow-node { --c: var(--st-todo); --cb: var(--st-todo-bg); --ci: var(--st-todo-ink); --ct: 255 255 255;
+  padding-left: 16px !important; color: rgb(var(--fg)); background: rgb(var(--cb));
+  box-shadow: inset 4px 0 0 rgb(var(--c)), inset 0 0 0 1px rgb(var(--c) / .45); }
+.flow-node .flow-dot { display: none; }
+.flow-dot { position: absolute; left: 9px; top: 12px; height: 7px; width: 7px; border-radius: 9999px; background: rgb(var(--st-todo)); }
+.flow-lista { --c: var(--st-done); --cb: var(--st-done-bg); --ci: var(--st-done-ink); }
+.flow-en_curso, .flow-en_revision { --c: var(--st-progress); --cb: var(--st-progress-bg); --ci: var(--st-progress-ink); --ct: 69 26 3; }
+.flow-bloqueada { --c: var(--st-blocked); --cb: var(--st-blocked-bg); --ci: var(--st-blocked-ink); }
+.flow-vencida { --c: var(--st-blocked); --cb: var(--st-blocked-bg); --ci: var(--st-blocked-ink);
+  background-image: repeating-linear-gradient(135deg, transparent 0 7px, rgb(var(--st-blocked) / .10) 7px 14px); }
+.flow-pill { display: inline-flex; align-items: center; border-radius: 6px; padding: 1px 7px; font-size: 11px; font-weight: 650; line-height: 17px;
+  color: rgb(var(--ct)); background: rgb(var(--ci)); }
+.flow-vencida .flow-pill { background: transparent; color: rgb(var(--st-blocked)); box-shadow: inset 0 0 0 1.5px rgb(var(--st-blocked)); }
+.flow-swatch { display: inline-block; height: 12px; width: 18px; border-radius: 4px; background: rgb(var(--st-todo)); box-shadow: none; }
+.flow-swatch.flow-lista { background: rgb(var(--st-done)); }
+.flow-swatch.flow-en_curso, .flow-swatch.flow-en_revision { background: rgb(var(--st-progress)); }
+.flow-swatch.flow-bloqueada { background: rgb(var(--st-blocked)); }
+.flow-swatch.flow-vencida { background: repeating-linear-gradient(135deg, rgb(var(--st-blocked)) 0 3px, transparent 3px 6px); box-shadow: inset 0 0 0 1.5px rgb(var(--st-blocked)); }
+
+/* ===================== V3: fondo propio =====================
+   La herramienta se apoya en una hoja de consigna: renglones muy tenues cada 28 px (el mismo ritmo
+   de las líneas numeradas) y, en el mapa del Flujo, una cuadrícula de puntos como papel de diagrama. */
+.r3-ruled { background-color: rgb(var(--canvas));
+  background-image: repeating-linear-gradient(to bottom, transparent 0 27px, rgb(var(--fg) / .045) 27px 28px); }
+.r3-dots { background-color: rgb(var(--sunk));
+  background-image: radial-gradient(rgb(var(--fg) / .16) 1px, transparent 1.3px); background-size: 18px 18px; }
+
+/* ===================== V3: landing ===================== */
+.landing-title { display: flex; flex-direction: column; gap: .04em; font-size: clamp(32px, 8.4vw, 58px); font-weight: 650; line-height: 1.04; letter-spacing: -0.045em; }
+@media (min-width: 1024px) { .landing-title { font-size: clamp(40px, 4.3vw, 58px); } }
+.landing-line { display: grid; grid-template-columns: .62em minmax(0, 1fr); align-items: baseline; white-space: nowrap; animation: enter .6s cubic-bezier(.2,.8,.2,1) both; }
+.landing-n { font-family: "Geist Mono", ui-monospace, monospace; font-size: .26em; font-weight: 400; letter-spacing: 0; color: rgb(var(--fg-3)); transform: translateY(-.35em); }
+.demo-timer { animation: demotimer 2.8s linear both; }
+@keyframes demotimer { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.demo-row { animation: enter .35s cubic-bezier(.2,.8,.2,1) both; }
+.demo-bar { transform-origin: left; animation: grow .7s cubic-bezier(.2,.8,.2,1) both; }
+@keyframes grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.cycle { counter-reset: none; }
+.cycle-n { display: inline-grid; place-items: center; height: 34px; width: 34px; border-radius: 9999px; background: rgb(var(--card)); box-shadow: inset 0 0 0 1px rgb(var(--line) / var(--line-a)); font-weight: 600; font-size: 14px; }
+@media (min-width: 768px) {
+  .cycle-step:not(:last-child)::after { content: ""; position: absolute; top: 17px; left: 44px; right: -6px; height: 1px; background: rgb(var(--line) / var(--line-a)); }
+}
+.route-list { display: flex; flex-direction: column; border-left: 1px solid rgb(var(--line) / var(--line-a)); }
+.route-list li { position: relative; display: flex; align-items: center; gap: 14px; padding: 12px 0 12px 22px; font-size: 17px; font-weight: 500; letter-spacing: -0.01em; }
+.route-n { position: absolute; left: -12px; display: grid; place-items: center; height: 24px; width: 24px; border-radius: 9999px; background: rgb(var(--canvas)); box-shadow: inset 0 0 0 1px rgb(var(--line) / var(--line-a)); font-size: 12px; font-weight: 600; color: rgb(var(--fg-2)); }
+@media (prefers-reduced-motion: reduce) { .demo-timer { display: none; } }

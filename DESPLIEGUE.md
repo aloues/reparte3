@@ -114,6 +114,44 @@ Hay una **cadena de proveedores**: se usa el primero que tenga clave y responda 
 
 Sin clave, o si se pasa un límite, la app lo dice en una línea y ofrece la **detección rápida por formato**.
 
+## 3c. V3: correo al asignar tareas (opcional, necesita un proveedor)
+
+La Edge Function `send-email` envía **un correo por persona** con sus tareas nuevas y un botón «Revisar asignación». Abrir el enlace no acepta nada. Agrupa un reparto completo en un solo correo, no duplica envíos y respeta a quien apaga los correos en **Ajustes → Avisos**.
+
+1. Elige **un** proveedor de correo transaccional.
+   - **Resend:** pide verificar un dominio propio.
+   - **Brevo:** permite verificar solo un remitente.
+   - Gmail no sirve aquí: la contraseña de aplicación solo funciona para los correos de acceso de Supabase Auth.
+2. Guarda los secretos en Supabase (**Edge Functions → Secrets**):
+   - Con Resend: `RESEND_API_KEY` y `EMAIL_FROM` (por ejemplo, `Reparte3 <avisos@tu-dominio.com>`).
+   - Con Brevo: `BREVO_API_KEY`, `EMAIL_FROM_ADDRESS` (el remitente verificado) y `EMAIL_FROM_NAME`, opcional.
+3. Despliega la función:
+   ```bash
+   npx supabase@2.122.0 functions deploy send-email --no-verify-jwt
+   ```
+4. En el **SQL Editor**, guarda en Vault la dirección de la función. Usa el mismo `push_secret` de las notificaciones push:
+   ```sql
+   select vault.create_secret('https://TU_REF.supabase.co/functions/v1/send-email', 'email_url');
+   ```
+
+El cron `reparte3-email` (cada minuto) solo llama a la función si hay asignaciones sin correo. Sin proveedor, la función responde «no_provider» y no envía nada.
+
+## 3d. V3: elegir archivos desde Google Drive (opcional)
+
+Sin esta configuración, la pestaña **Archivos** funciona pegando enlaces. Con ella aparece el botón «Elegir de Google Drive».
+
+1. En Google Cloud Console, crea un proyecto y activa **Google Picker API** y **Google Drive API**.
+2. En la **pantalla de consentimiento OAuth**, usa el alcance mínimo `https://www.googleapis.com/auth/drive.file`. La app solo ve los archivos que la persona elige.
+3. Crea un **ID de cliente OAuth** de tipo «Aplicación web».
+   - **Orígenes autorizados:** `https://TU-USUARIO.github.io` y `http://localhost:5173`.
+4. Crea una **clave de API**, restringida a Picker API y a tus orígenes.
+5. En GitHub, ve a **Settings → Secrets and variables → Actions → Variables** y agrega:
+   - `VITE_GOOGLE_CLIENT_ID`
+   - `VITE_GOOGLE_API_KEY`
+   - `VITE_GOOGLE_APP_ID` (el número del proyecto de Google Cloud)
+
+No se guarda ningún token de Google. Reparte3 solo guarda el enlace, el nombre y el tipo del archivo elegido.
+
 ## 4. Hacerte administrador
 
 Primero crea tu cuenta en la app. Después ejecuta esto en el **SQL Editor**:

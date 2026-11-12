@@ -22,6 +22,7 @@ import PremiumPage from './pages/Premium';
 import SettingsPage from './pages/Settings';
 import AdminPage from './pages/Admin';
 import LegalPage from './pages/Legal';
+import LandingPage from './pages/Landing';
 
 export default function App() {
   if (!configured) return <SetupScreen />;
@@ -37,7 +38,14 @@ function Root() {
   if (recovery) return <ResetPassword />;
   if (!session) {
     if (route.parts[0] === 'unirse' && route.parts[1]) { try { sessionStorage.setItem('r3-join', route.parts[1]); } catch (e) { /* nada */ } }
-    return <AuthPage theme={theme} setTheme={setTheme} />;
+    // La portada explica el producto; el acceso vive en #/entrar. Una invitación va directo al acceso.
+    if (route.parts[0] === 'entrar' || route.parts[0] === 'unirse') return <AuthPage theme={theme} setTheme={setTheme} initialMode={route.query.modo === 'registro' ? 'register' : 'login'} />;
+    // Enlace directo (p. ej. «Revisar asignación» desde un correo): pedir acceso y volver ahí después de entrar.
+    if (route.parts[0]) {
+      try { sessionStorage.setItem('r3-next', window.location.hash); } catch (e) { /* nada */ }
+      return <AuthPage theme={theme} setTheme={setTheme} initialMode="login" />;
+    }
+    return <LandingPage theme={theme} setTheme={setTheme} />;
   }
   if (profile === undefined) return <Splash />;
   if (profile === null) return <Onboarding />;
@@ -205,6 +213,13 @@ function Shell({ route, theme, setTheme }) {
   const at = route.parts[0] || 'inicio';
   const taskId = route.query.tarea;
 
+  // Después de entrar desde #/entrar, ir al inicio.
+  useEffect(() => {
+    let next = null;
+    try { next = sessionStorage.getItem('r3-next'); if (next) sessionStorage.removeItem('r3-next'); } catch (e) { /* nada */ }
+    if (next && !next.startsWith('#/entrar')) window.location.hash = next;
+    else if (at === 'entrar') go('/');
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   // Invitación pendiente guardada antes de iniciar sesión.
   useEffect(() => {
     try { const code = sessionStorage.getItem('r3-join'); if (code) { sessionStorage.removeItem('r3-join'); go(`/unirse/${code}`); } } catch (e) { /* nada */ }
@@ -230,7 +245,7 @@ function Shell({ route, theme, setTheme }) {
   if (at === 'inicio') page = <Dashboard scope="all" route={route} onNew={() => setWizard(true)} />;
   else if (at === 'mis-tareas') page = <Dashboard scope="mine" route={route} onNew={() => setWizard(true)} />;
   else if (at === 'proyectos') page = <ProjectsPage onNew={() => setWizard(true)} />;
-  else if (at === 'p') page = <ProjectPage id={route.parts[1]} tab={route.parts[2] || 'tareas'} route={route} />;
+  else if (at === 'p') page = <ProjectPage id={route.parts[1]} tab={route.parts[2] || 'resumen'} route={route} />;
   else if (at === 'unirse') page = <JoinPage code={route.parts[1]} />;
   else if (at === 'premium') page = <PremiumPage />;
   else if (at === 'ajustes') page = <SettingsPage theme={theme} setTheme={setTheme} />;
@@ -243,7 +258,7 @@ function Shell({ route, theme, setTheme }) {
       <Sidebar route={route} open={menu} onClose={() => setMenu(false)} collapsed={collapsed && isLg} setCollapsed={setCollapsed}
                theme={theme} setTheme={setTheme} onNew={() => setWizard(true)} queueCount={queue.length} />
       <div className="min-w-0 flex-1 overflow-x-clip lg:py-2 lg:pr-2">
-        <div className="min-h-[100dvh] bg-canvas lg:min-h-[calc(100dvh-16px)] lg:rounded-xl lg:shadow-xs lg:ring-1 lg:ring-inset lg:ring-line">
+        <div className="r3-ruled min-h-[100dvh] lg:min-h-[calc(100dvh-16px)] lg:rounded-xl lg:shadow-xs lg:ring-1 lg:ring-inset lg:ring-line">
           <header className="sticky top-[env(safe-area-inset-top,0px)] z-20 border-b border-line bg-canvas/85 backdrop-blur-md lg:rounded-t-xl">
             <div className="gutter mx-auto flex h-14 max-w-[1280px] items-center gap-2">
               <IconBtn label="Abrir menú" onClick={() => setMenu(true)} className="-ml-1.5 h-9 w-9 lg:hidden"><Menu className="h-5 w-5" /></IconBtn>

@@ -25,7 +25,7 @@ export default function SettingsPage({ theme, setTheme }) {
 
   useEffect(() => {
     supabase.from('notification_prefs').select('*').eq('user_id', uid).maybeSingle()
-      .then(({ data }) => setPrefs(data || { user_id: uid, push: true, chat: true, reminders: true, quiet_start: 20, quiet_end: 8 }));
+      .then(({ data }) => setPrefs(data || { user_id: uid, push: true, chat: true, reminders: true, email: true, quiet_start: 20, quiet_end: 8 }));
     currentSubscription().then((s) => setPush(!!s)).catch(() => setPush(false));
   }, [uid]);
 
@@ -60,6 +60,7 @@ export default function SettingsPage({ theme, setTheme }) {
           <div className="mt-2 divide-y divide-line">
             <Toggle id="pf-push" label="Enviar avisos push" desc="Si lo apagas, los avisos solo aparecen dentro de la app." checked={prefs.push} onChange={(v) => savePrefs({ push: v })} />
             <Toggle id="pf-chat" label="Mensajes y comentarios" desc="Cuando alguien escribe en el chat del grupo o comenta una tarea tuya." checked={prefs.chat} onChange={(v) => savePrefs({ chat: v })} />
+            <Toggle id="pf-mail" label="Correo cuando te asignan tareas" desc="Un correo con el resumen de tus tareas nuevas y un botón para revisarlas. Nunca acepta nada por ti." checked={prefs.email !== false} onChange={(v) => savePrefs({ email: v })} />
             <Toggle id="pf-rem" label="Recordatorios de avance" desc="Un día antes y el día de cada entrega, tareas vencidas y tareas por aceptar." checked={prefs.reminders} onChange={(v) => savePrefs({ reminders: v })} />
           </div>
           <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-line pt-4 text-[13.5px]">

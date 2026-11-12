@@ -1,18 +1,23 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   ListChecks, MessageCircle, Users, FileText, Settings, List, Columns3, Plus, Shuffle, Calendar, Sparkles, Copy, Check, Trash2,
-  Link2, UserPlus, LogOut, Archive, GraduationCap, Info, MessageSquare, ArrowUpRight, Loader2, Paperclip,
+  Link2, UserPlus, LogOut, Archive, GraduationCap, Info, Paperclip, LayoutDashboard, GitBranch, Activity as ActivityIcon,
 } from 'lucide-react';
 import { useApp } from '../lib/store';
 import { useLocal } from '../lib/hooks';
 import { go, appUrl } from '../lib/router';
 import { ROLES, fmtShort, relDays, isPremium, ago, todayISO } from '../lib/format';
-import { proposeDistribution, analyzeBrief } from '../lib/detect';
-import { extractText } from '../lib/extract';
+import { proposeDistribution } from '../lib/detect';
 import { Btn, Chip, Mono, Avatar, AvatarStack, UnderlineTabs, Segmented, Empty, Spinner, Modal, SelectField, IconBtn } from '../components/ui';
 import { ListView, BoardView, openTask } from '../components/TaskViews';
-import { Messages, Files, DropZone } from '../components/Chat';
+import { Messages } from '../components/Chat';
 import Wizard from '../components/Wizard';
+import Summary from '../components/project/Summary';
+import Flow from '../components/project/Flow';
+import Brief from '../components/project/Brief';
+import Resources from '../components/project/Resources';
+import ActivityFeed from '../components/project/ActivityFeed';
+import { progressOf } from '../lib/center';
 import { followUp, TRACK } from '../lib/plan';
 
 /* ---------------- Mis tareas por aceptar: aceptar la lista completa ---------------- */
@@ -314,65 +319,6 @@ function TeamTab({ p, role }) {
   );
 }
 
-/* ---------------- Consigna ---------------- */
-function BriefTab({ p, role }) {
-  const { updateProject, addTask, tasks, toast } = useApp();
-  const coord = role === 'coordinador';
-  const [busy, setBusy] = useState(false);
-  const [found, setFound] = useState(null);
-  const existing = new Set(tasks.filter((t) => t.project_id === p.id).map((t) => t.title.toLowerCase()));
-  const upload = async (fs) => {
-    setBusy(true);
-    try {
-      const out = await extractText(fs[0]);
-      await updateProject(p.id, { brief_text: out.text.slice(0, 100000), brief_file: out.fileName.slice(0, 200) }, 'Consigna actualizada.');
-    } catch (e) { toast(e.message, { icon: 'error' }); }
-    setBusy(false);
-  };
-  const detect = () => setFound(analyzeBrief(p.brief_text, Number((p.due_date || todayISO()).slice(0, 4))).filter((x) => !existing.has(x.title.toLowerCase())).map((x) => ({ ...x, on: true })));
-  const addFound = async () => {
-    const list = found.filter((x) => x.on);
-    setBusy(true);
-    for (const x of list) await addTask(p.id, { title: x.title, hours: x.hours, due_date: x.due || null });
-    setBusy(false); setFound(null);
-    toast(`Añadiste ${list.length} tareas.`);
-  };
-  return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
-      <section className="rounded-xl bg-card ring-1 ring-inset ring-line" aria-labelledby="br-t">
-        <header className="flex flex-wrap items-center gap-3 border-b border-line px-5 py-3.5">
-          <h2 id="br-t" className="text-[14px] font-semibold">Consigna</h2>
-          {p.brief_file && <Chip><FileText className="h-3 w-3" />{p.brief_file}</Chip>}
-          {coord && p.brief_text && <Btn size="sm" kind="secondary" className="ml-auto" onClick={detect}><ListChecks className="h-4 w-4" />Detectar tareas</Btn>}
-        </header>
-        {p.brief_text ? <div className="max-h-[60vh] overflow-y-auto whitespace-pre-wrap px-5 py-4 text-[14px] leading-relaxed">{p.brief_text}</div>
-          : <p className="px-5 py-8 text-[14px] text-fg-2">{coord ? 'Todavía no subiste la consigna.' : 'La coordinación todavía no subió la consigna.'}</p>}
-      </section>
-      <div className="flex flex-col gap-6">
-        {coord && <DropZone compact multiple={false} id="br-file" busy={busy} onFiles={upload} accept=".pdf,.docx,.txt,.md" label={p.brief_text ? 'Reemplazar la consigna' : 'Subir la consigna'} hint="PDF, Word o texto. Se lee en tu dispositivo." />}
-        <section className="rounded-xl bg-card p-5 ring-1 ring-inset ring-line">
-          <h2 className="flex items-center gap-2 text-[14px] font-semibold"><Paperclip className="h-4 w-4 text-fg-3" />Archivos del grupo</h2>
-          <div className="mt-3"><Files projectId={p.id} readOnly={role === 'docente'} /></div>
-        </section>
-      </div>
-      <Modal open={!!found} onClose={() => setFound(null)} title="Tareas detectadas en la consigna" size="lg" labelledBy="det-title"
-             footer={<><Btn onClick={() => setFound(null)}>Cancelar</Btn><Btn kind="primary" loading={busy} disabled={!found?.some((x) => x.on)} onClick={addFound}>Añadir {found?.filter((x) => x.on).length || 0}</Btn></>}>
-        {found?.length === 0 ? <p className="text-[14px] text-fg-2">No encontramos tareas nuevas (con viñetas o verbos de entrega) que no estén ya en el proyecto.</p> : <>
-          <p className="mb-3 flex items-start gap-2 text-[12.5px] text-fg-2"><Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />Detección por formato, sin IA. Marca solo las que correspondan.</p>
-          <ul className="divide-y divide-line overflow-hidden rounded-xl ring-1 ring-inset ring-line">
-            {found?.map((x, i) => (
-              <li key={i}><label className="flex cursor-pointer items-center gap-3 bg-card px-4 py-2.5 hover:bg-hov">
-                <input type="checkbox" checked={x.on} onChange={() => setFound(found.map((y, j) => (j === i ? { ...y, on: !y.on } : y)))} className="h-4 w-4 rounded accent-[rgb(var(--accent))]" />
-                <span className="min-w-0 flex-1 text-[13.5px]">{x.title}</span><Mono className="text-fg-3">línea {x.line}</Mono>
-              </label></li>
-            ))}
-          </ul>
-        </>}
-      </Modal>
-    </div>
-  );
-}
-
 /* ---------------- Ajustes ---------------- */
 function SettingsTab({ p, role }) {
   const { updateProject, deleteProject, removeMember, uid, membersOf } = useApp();
@@ -439,45 +385,55 @@ export default function ProjectPage({ id, tab, route }) {
   if (!loaded) return <Spinner />;
   if (!p) return <Empty icon={Info} title="No encontramos este proyecto" text="Puede que lo hayan eliminado o que ya no estés en el grupo."><Btn kind="primary" onClick={() => go('/')}>Ir al inicio</Btn></Empty>;
   const role = p.myRole;
-  const done = ts.filter((t) => t.status === 'lista').length;
-  const pct = ts.length ? Math.round((done / ts.length) * 100) : 0;
+  const prog = progressOf(ts);
   const chatUnread = notifs.filter((n) => !n.read_at && n.kind === 'mensaje' && n.project_id === id).length;
+  const toTab = (t) => go(`/p/${id}${t === 'resumen' ? '' : `/${t}`}`);
   const tabs = [
+    { id: 'resumen', label: 'Resumen', icon: LayoutDashboard },
     { id: 'tareas', label: 'Tareas', icon: ListChecks, count: ts.filter((t) => t.status !== 'lista').length },
-    { id: 'chat', label: 'Chat', icon: MessageCircle, count: chatUnread, alert: chatUnread > 0 },
-    { id: 'equipo', label: 'Equipo', icon: Users, count: membersOf(id).length },
+    { id: 'flujo', label: 'Flujo', icon: GitBranch },
     { id: 'consigna', label: 'Consigna', icon: FileText },
-    { id: 'ajustes', label: 'Ajustes', icon: Settings },
+    { id: 'archivos', label: 'Archivos', icon: Paperclip },
+    { id: 'chat', label: 'Chat', icon: MessageCircle, count: chatUnread, alert: chatUnread > 0 },
+    { id: 'actividad', label: 'Actividad', icon: ActivityIcon },
+    { id: 'equipo', label: 'Equipo', icon: Users, count: membersOf(id).length },
   ];
   return (
     <div>
-      <header className="mb-6 flex flex-wrap items-end justify-between gap-5">
-        <div className="min-w-0">
+      <header className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
+        <div className="min-w-0 sm:flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <Chip tone={role === 'coordinador' ? 'accent' : role === 'docente' ? 'violet' : 'neutral'}>{role === 'docente' && <GraduationCap className="h-3 w-3" />}{ROLES[role].short}</Chip>
             {isPremium(p) && <Chip tone="accent"><Sparkles className="h-3 w-3" />Premium</Chip>}
             {p.status === 'archivado' && <Chip><Archive className="h-3 w-3" />Archivado</Chip>}
           </div>
-          <h2 className="mt-3 text-[26px] font-semibold leading-tight tracking-[-0.03em] sm:text-[30px]" style={{ textWrap: 'balance' }}>{p.name}</h2>
+          <h2 className="mt-3 text-[26px] font-semibold leading-tight tracking-[-0.03em] sm:text-[32px]" style={{ textWrap: 'balance' }}>{p.name}</h2>
           <p className="mt-1.5 flex flex-wrap items-center gap-x-5 gap-y-1 text-[13.5px] text-fg-2">
             {p.course && <span>{p.course}</span>}
             <span className="inline-flex items-center gap-1.5"><Calendar className="h-4 w-4 text-fg-3" />{p.due_date ? `Entrega ${fmtShort(p.due_date)}, ${relDays(p.due_date)}` : 'Sin fecha de entrega'}</span>
           </p>
         </div>
         <div className="flex items-center gap-4">
-          <div className="w-36"><p className="flex justify-between text-[12px] text-fg-2"><span>Avance</span><Mono>{done}/{ts.length}</Mono></p>
-            <span className="mt-1.5 block h-1.5 overflow-hidden rounded-full bg-hov2"><span className="block h-full rounded-full bg-fg transition-[width] duration-700" style={{ width: `${pct}%` }} /></span></div>
-          <AvatarStack ring="canvas" people={membersOf(id).map((m) => ({ id: m.user_id, name: m.profile?.display_name || '?', me: m.user_id === uid }))} />
+          <div className="min-w-0 flex-1 sm:w-40 sm:flex-none" title="Cuenta como avance una tarea aprobada">
+            <p className="flex justify-between text-[12px] text-fg-2"><span>Avance aprobado</span><Mono>{prog.done}/{prog.total}</Mono></p>
+            <span className="mt-1.5 block h-1.5 overflow-hidden rounded-full bg-hov2" role="img" aria-label={`${prog.pct}% aprobado`}><span className="block h-full rounded-full bg-fg transition-[width] duration-700" style={{ width: `${prog.pct}%` }} /></span>
+          </div>
+          <button type="button" onClick={() => toTab('equipo')} aria-label="Ver equipo" className="rounded-full"><AvatarStack ring="canvas" people={membersOf(id).map((m) => ({ id: m.user_id, name: m.profile?.display_name || '?', me: m.user_id === uid }))} /></button>
+          <IconBtn label="Ajustes del proyecto" onClick={() => toTab('ajustes')} className={`h-9 w-9 ring-1 ring-inset ring-line ${tab === 'ajustes' ? 'bg-hov2 text-fg' : ''}`}><Settings className="h-4 w-4" /></IconBtn>
         </div>
       </header>
       <div className="mb-6 border-b border-line">
-        <UnderlineTabs label="Secciones del proyecto" value={tab} onChange={(t) => go(`/p/${id}${t === 'tareas' ? '' : `/${t}`}`)} tabs={tabs} />
+        <UnderlineTabs label="Secciones del proyecto" value={tab} onChange={toTab} tabs={tabs} />
       </div>
       <div key={tab} className="anim-enter">
+        {tab === 'resumen' && <Summary p={p} role={role} onTab={toTab} />}
         {tab === 'tareas' && <TasksTab p={p} role={role} route={route} />}
+        {tab === 'flujo' && <Flow p={p} />}
+        {tab === 'consigna' && <Brief p={p} role={role} />}
+        {tab === 'archivos' && <Resources p={p} role={role} onTab={toTab} />}
         {tab === 'chat' && <ChatTab p={p} role={role} />}
+        {tab === 'actividad' && <ActivityFeed p={p} />}
         {tab === 'equipo' && <TeamTab p={p} role={role} />}
-        {tab === 'consigna' && <BriefTab p={p} role={role} />}
         {tab === 'ajustes' && <SettingsTab p={p} role={role} />}
       </div>
     </div>

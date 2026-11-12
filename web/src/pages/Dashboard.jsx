@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { List, Columns3, LayoutDashboard, Search, X, Check, ArrowUpRight, Crosshair, ChevronLeft, ChevronRight, FolderOpen, Calendar, Plus, Link2, CheckCheck } from 'lucide-react';
 import { useApp } from '../lib/store';
 import { useLocal } from '../lib/hooks';
@@ -177,22 +177,68 @@ function Summary({ tasks, projects, queue }) {
   );
 }
 
-export default function Dashboard({ scope, onNew }) {
+/** Filtro de proyectos (uno o varios), con búsqueda. La selección vive en la URL (?proyectos=a,b). */
+function ProjectFilter({ projects, selected, onChange }) {
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState('');
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!open) return undefined;
+    const off = (e) => { if (!ref.current?.contains(e.target)) setOpen(false); };
+    const esc = (e) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('mousedown', off); document.addEventListener('keydown', esc);
+    return () => { document.removeEventListener('mousedown', off); document.removeEventListener('keydown', esc); };
+  }, [open]);
+  const label = !selected.length ? 'Todos mis proyectos' : selected.length === 1 ? projects.find((p) => p.id === selected[0])?.name : `${selected.length} proyectos`;
+  const shown = projects.filter((p) => !q.trim() || p.name.toLowerCase().includes(q.trim().toLowerCase()));
+  const toggle = (id) => onChange(selected.includes(id) ? selected.filter((x) => x !== id) : [...selected, id]);
+  return (
+    <div ref={ref} className="relative min-w-0 flex-1 sm:w-60 sm:flex-none">
+      <button type="button" id="dash-proj" onClick={() => setOpen(!open)} aria-haspopup="listbox" aria-expanded={open}
+              className={`field flex h-9 items-center gap-2 text-left text-[13px] ${selected.length ? 'ring-accent/50' : ''}`}>
+        <FolderOpen className="h-4 w-4 shrink-0 text-fg-3" /><span className="min-w-0 flex-1 truncate">{label}</span>
+        {selected.length > 0 && <span role="button" tabIndex={0} aria-label="Quitar filtro de proyectos" onClick={(e) => { e.stopPropagation(); onChange([]); }} onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); onChange([]); } }} className="grid h-5 w-5 place-items-center rounded text-fg-3 hover:text-fg"><X className="h-3.5 w-3.5" /></span>}
+      </button>
+      {open && (
+        <div className="anim-enter absolute right-0 z-30 mt-1.5 w-[min(320px,calc(100vw-32px))] rounded-xl bg-card p-2 shadow-pop ring-1 ring-inset ring-line">
+          {projects.length > 5 && <input autoFocus type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar proyecto" aria-label="Buscar proyecto" className="field mb-2 h-8 text-[13px]" />}
+          <ul role="listbox" aria-multiselectable="true" aria-label="Proyectos" className="max-h-72 overflow-y-auto">
+            <li><button type="button" role="option" aria-selected={!selected.length} onClick={() => { onChange([]); setOpen(false); }} className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[13px] hover:bg-hov">
+              <span className={`grid h-4 w-4 place-items-center rounded ring-1 ring-inset ${!selected.length ? 'bg-accent text-on-accent ring-accent' : 'ring-fg-3'}`}>{!selected.length && <Check className="sw-bold h-3 w-3" />}</span>Todos mis proyectos</button></li>
+            {shown.map((p) => {
+              const on = selected.includes(p.id);
+              return (
+                <li key={p.id}><button type="button" role="option" aria-selected={on} onClick={() => toggle(p.id)} className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[13px] hover:bg-hov">
+                  <span className={`grid h-4 w-4 shrink-0 place-items-center rounded ring-1 ring-inset ${on ? 'bg-accent text-on-accent ring-accent' : 'ring-fg-3'}`}>{on && <Check className="sw-bold h-3 w-3" />}</span><span className="truncate">{p.name}</span></button></li>
+              );
+            })}
+            {!shown.length && <li className="px-2.5 py-2 text-[13px] text-fg-2">Ningún proyecto con ese nombre.</li>}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function Dashboard({ scope, onNew, route }) {
   const { tasks, projects, uid, loaded, profile } = useApp();
   const [tab, setTab] = useLocal('r3-tab', 'lista');
   const [query, setQuery] = useState('');
-  const [pf, setPf] = useState('');
   const queue = useMemo(() => myQueue(tasks, projects, uid), [tasks, projects, uid]);
   if (!loaded) return <Spinner />;
   if (!projects.length) return <Welcome onNew={onNew} />;
 
   const active = projects.filter((p) => p.status === 'activo');
   const activeIds = new Set(active.map((p) => p.id));
+  // Solo proyectos a los que la persona tiene acceso (los de su lista); los ids desconocidos de la URL se ignoran.
+  const sel = String(route?.query?.proyectos || '').split(',').filter((x) => activeIds.has(x));
+  const setSel = (ids) => { const q = new URLSearchParams(route?.query || {}); if (ids.length) q.set('proyectos', ids.join(',')); else q.delete('proyectos'); const qs = q.toString(); go(`/${scope === 'mine' ? 'mis-tareas' : ''}${qs ? `?${qs}` : ''}`); };
+  const pf = sel.length ? new Set(sel) : null;
   const q = query.trim().toLowerCase();
   const scoped = tasks
     .filter((t) => activeIds.has(t.project_id))
     .filter((t) => scope !== 'mine' || t.assignee === uid || (t.status === 'en_revision' && ['revisor', 'coordinador'].includes(projects.find((p) => p.id === t.project_id)?.myRole) && t.assignee !== uid))
-    .filter((t) => !pf || t.project_id === pf)
+    .filter((t) => !pf || pf.has(t.project_id))
     .filter((t) => !q || t.title.toLowerCase().includes(q))
     .sort((a, b) => (a.due_date || '9999').localeCompare(b.due_date || '9999'));
 
@@ -204,12 +250,7 @@ export default function Dashboard({ scope, onNew }) {
           <h2 className="mt-1 text-[26px] font-semibold tracking-[-0.03em] sm:text-[30px]">{scope === 'mine' ? 'Mis tareas' : `Hola, ${profile.display_name.split(' ')[0]}`}</h2>
         </div>
         <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
-          {active.length > 1 && (
-            <SelectField id="dash-proj" value={pf} onChange={setPf} className="min-w-0 flex-1 sm:w-56 sm:flex-none [&_select]:h-9 [&_select]:text-[13px]">
-              <option value="">Todos los proyectos</option>
-              {active.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-            </SelectField>
-          )}
+          {active.length > 1 && <ProjectFilter projects={active} selected={sel} onChange={setSel} />}
           <label className="relative flex min-w-0 flex-1 items-center sm:w-56 sm:flex-none">
             <span className="sr-only">Buscar tareas</span>
             <Search className="pointer-events-none absolute left-3 h-4 w-4 text-fg-3" />
@@ -227,10 +268,10 @@ export default function Dashboard({ scope, onNew }) {
         ]} />
       </div>
 
-      {tab !== 'resumen' && <NextStrip queue={queue} />}
-      {tab === 'lista' && <ListView tasks={scoped} showProject={!pf} empty={<Empty icon={CheckCheck} title={q ? `Ninguna tarea coincide con «${query.trim()}»` : scope === 'mine' ? 'No tienes tareas asignadas' : 'Todavía no hay tareas'} text={scope === 'mine' ? 'Cuando te asignen una tarea o tomes una, aparecerá aquí.' : 'Abre un proyecto para añadir tareas o repartirlas.'} />} />}
-      {tab === 'tablero' && <BoardView tasks={scoped} showProject={!pf} />}
-      {tab === 'resumen' && <Summary tasks={scoped} projects={pf ? active.filter((p) => p.id === pf) : active} queue={queue} />}
+      {tab !== 'resumen' && <NextStrip queue={pf ? queue.filter((it) => pf.has(it.t.project_id)) : queue} />}
+      {tab === 'lista' && <ListView tasks={scoped} showProject={!pf || pf.size > 1} empty={<Empty icon={CheckCheck} title={q ? `Ninguna tarea coincide con «${query.trim()}»` : pf ? 'No hay tareas en los proyectos elegidos' : scope === 'mine' ? 'No tienes tareas asignadas' : 'Todavía no hay tareas'} text={pf || q ? 'Prueba con otros proyectos o limpia los filtros.' : scope === 'mine' ? 'Cuando te asignen una tarea o tomes una, aparecerá aquí.' : 'Abre un proyecto para añadir tareas o repartirlas.'}>{(pf || q) && <Btn onClick={() => { setQuery(''); setSel([]); }}><X className="h-4 w-4" />Limpiar filtros</Btn>}</Empty>} />}
+      {tab === 'tablero' && <BoardView tasks={scoped} showProject={!pf || pf.size > 1} />}
+      {tab === 'resumen' && <Summary tasks={scoped} projects={pf ? active.filter((p) => pf.has(p.id)) : active} queue={queue} />}
     </div>
   );
 }

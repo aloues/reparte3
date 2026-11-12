@@ -172,7 +172,9 @@ export function AppProvider({ children }) {
       return r;
     },
     async addTask(projectId, f) {
-      const r = await run(() => supabase.from('tasks').insert({ project_id: projectId, title: f.title, description: f.description || '', hours: f.hours || null, due_date: f.due_date || null, assignee: f.assignee || null }).select().single());
+      const row = { project_id: projectId, title: f.title, description: f.description || '', hours: f.hours || null, due_date: f.due_date || null, assignee: f.assignee || null };
+      if (f.source_line) { row.source_line = f.source_line; row.origin = 'formato'; }
+      const r = await run(() => supabase.from('tasks').insert(row).select().single());
       if (r) upsertTask(r);
       return r;
     },

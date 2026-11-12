@@ -8,6 +8,7 @@ import { useApp } from '../lib/store';
 import { analyzeBrief } from '../lib/detect';
 import { extractText } from '../lib/extract';
 import { planWithAI } from '../lib/ai';
+import { uploadBriefFile } from '../lib/brief';
 import { todayISO, fmtShort } from '../lib/format';
 import { validatePlan, fromFormat, distribute, buildCheckpoints, PHASES, KINDS, TOLERANCE } from '../lib/plan';
 import { appUrl, go } from '../lib/router';
@@ -130,7 +131,7 @@ function PlanStep({ pid, brief, setBrief, rows, setRows, result, setResult }) {
     setError(''); setPhase('reading');
     try {
       const out = await extractText(f);
-      setBrief({ text: out.text, fileName: out.fileName, warnings: out.warnings, fresh: true });
+      setBrief({ text: out.text, fileName: out.fileName, warnings: out.warnings, fresh: true, file: f });
       setPhase('ready'); setRows([]); setResult(null); setMode('choose'); setAi({ state: 'idle', error: '', step: 0 });
     } catch (e) { setError(e.message); setPhase('empty'); }
   };
@@ -424,7 +425,13 @@ export default function Wizard({ open, onClose, projectId = null }) {
 
   const confirm = async () => {
     setBusy(true);
-    if (brief?.fresh) await updateProject(pid, { brief_text: brief.text.slice(0, 100000), brief_file: (brief.fileName || '').slice(0, 200) || null });
+    if (brief?.fresh) {
+      // Se guarda también el archivo original para verlo en la pestaña Consigna (si falla, queda el texto).
+      let saved = null;
+      if (brief.file) { try { saved = await uploadBriefFile(pid, brief.file, p?.brief_path); } catch (e) { saved = null; } }
+      const ok = await updateProject(pid, { brief_text: brief.text.slice(0, 100000), brief_file: (brief.fileName || '').slice(0, 200) || null, ...(saved ? { brief_path: saved.path, brief_mime: saved.mime, brief_size: saved.size } : {}) });
+      if (ok && saved) await saved.cleanup();
+    }
     const { plan, dist, cps: { checkpoints, taskCheckpoint, taskDue } } = split;
     const payload = plan.map((t) => {
       const o = ownerOf(dist, overrides, t.key);
