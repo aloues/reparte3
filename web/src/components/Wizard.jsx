@@ -352,10 +352,10 @@ function SplitStep({ split, overrides, setOverrides }) {
 
       <ul className="flex flex-col divide-y divide-line overflow-hidden rounded-xl ring-1 ring-inset ring-line">
         {plan.slice().sort((a, b) => (Number(b.hours) || 2) - (Number(a.hours) || 2)).map((t) => (
-          <li key={t.id} className="flex flex-wrap items-center gap-3 bg-card px-4 py-2.5">
-            <span className="min-w-0 flex-1 truncate text-[13.5px]">{t.title}</span>
+          <li key={t.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 bg-card px-4 py-2.5">
+            <span className="min-w-0 basis-full text-[13.5px] leading-5 sm:basis-0 sm:flex-1 sm:truncate">{t.title}</span>
             <Mono className="text-fg-2">{Number(t.hours) || 2} h</Mono>
-            <SelectField id={`sp-${t.id}`} value={owner(t.id) || ''} onChange={(v) => setOverrides({ ...overrides, [t.id]: v || null })} className="w-44 [&_select]:h-8 [&_select]:text-[13px]" aria-label={`Responsable de ${t.title}`}>
+            <SelectField id={`sp-${t.id}`} value={owner(t.id) || ''} onChange={(v) => setOverrides({ ...overrides, [t.id]: v || null })} className="min-w-0 flex-1 sm:w-44 sm:flex-none [&_select]:h-8 [&_select]:text-[13px]" aria-label={`Responsable de ${t.title}`}>
               {team.map((m) => <option key={m.user_id} value={m.user_id}>{m.user_id === uid ? 'Yo' : m.profile?.display_name}</option>)}
               {reservedSlots.length > 0 && <option value="reserva">Reservada</option>}
               <option value="">Sin asignar</option>
@@ -443,10 +443,10 @@ export default function Wizard({ open, onClose, projectId = null }) {
 
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-[60] grid place-items-center p-4">
+    <div className="safe-modal fixed inset-0 z-[60] grid place-items-center">
       <button type="button" tabIndex={-1} aria-label="Cerrar" onClick={close} className="absolute inset-0 bg-overlay backdrop-blur-[2px]" />
       <div role="dialog" aria-modal="true" aria-labelledby="wz-title" onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); close(); } }}
-           className="anim-scale relative flex max-h-[calc(100dvh-32px)] w-full max-w-[660px] flex-col overflow-hidden rounded-2xl bg-canvas shadow-pop ring-1 ring-inset ring-line">
+           className="safe-modal-box anim-scale relative flex w-full max-w-[660px] flex-col overflow-hidden rounded-2xl bg-canvas shadow-pop ring-1 ring-inset ring-line">
         <header className="flex shrink-0 flex-col gap-5 border-b border-line px-6 pb-5 pt-5">
           <div className="flex items-center justify-between">
             <h2 id="wz-title" className="text-[15px] font-semibold">{projectId ? `Plan de «${p?.name || ''}»` : 'Nuevo proyecto'}</h2>

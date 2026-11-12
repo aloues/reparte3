@@ -10,10 +10,46 @@ import { ROLES, fmtShort, relDays, isPremium, ago, todayISO } from '../lib/forma
 import { proposeDistribution, analyzeBrief } from '../lib/detect';
 import { extractText } from '../lib/extract';
 import { Btn, Chip, Mono, Avatar, AvatarStack, UnderlineTabs, Segmented, Empty, Spinner, Modal, SelectField, IconBtn } from '../components/ui';
-import { ListView, BoardView } from '../components/TaskViews';
+import { ListView, BoardView, openTask } from '../components/TaskViews';
 import { Messages, Files, DropZone } from '../components/Chat';
 import Wizard from '../components/Wizard';
 import { followUp, TRACK } from '../lib/plan';
+
+/* ---------------- Mis tareas por aceptar: aceptar la lista completa ---------------- */
+function MyPending({ p, role }) {
+  const { tasks, uid, taskAction, toast } = useApp();
+  const [busy, setBusy] = useState(false);
+  if (role === 'docente' || p.status !== 'activo') return null;
+  const mine = tasks.filter((t) => t.project_id === p.id && t.assignee === uid && !t.accepted && t.status !== 'lista');
+  if (!mine.length) return null;
+  const hours = mine.reduce((s, t) => s + (Number(t.hours) || 2), 0);
+  const acceptAll = async () => {
+    setBusy(true);
+    let ok = 0;
+    for (const t of mine) { if (await taskAction(t.id, 'aceptar')) ok++; }
+    setBusy(false);
+    if (ok) toast(ok === 1 ? 'Aceptaste tu tarea.' : `Aceptaste tus ${ok} tareas.`);
+  };
+  return (
+    <section className="anim-enter mb-5 rounded-xl bg-amber/[.07] p-4 ring-1 ring-inset ring-amber/25" aria-label="Tareas por aceptar">
+      <div className="flex flex-wrap items-center gap-3">
+        <p className="min-w-0 flex-1 text-[14px]">
+          <span className="font-semibold">{mine.length === 1 ? 'Te tocó 1 tarea' : `Te tocaron ${mine.length} tareas`}</span>
+          <span className="text-fg-2"> · {hours} h en total. Revísalas y acéptalas para que el grupo sepa que cuenta contigo.</span>
+        </p>
+        <Btn kind="primary" loading={busy} onClick={acceptAll} id="accept-all"><Check className="sw-bold h-4 w-4" />{mine.length === 1 ? 'Aceptar' : 'Aceptar todas'}</Btn>
+      </div>
+      <ul className="mt-3 flex flex-col gap-1.5">
+        {mine.map((t) => (
+          <li key={t.id}><button type="button" onClick={() => openTask(t.id)} className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[13px] hover:bg-amber/10">
+            <span className="min-w-0 flex-1 truncate">{t.title}</span><Mono className="shrink-0 text-fg-2">{Number(t.hours) || 2} h</Mono><span className="shrink-0 text-fg-2">{fmtShort(t.due_date)}</span>
+          </button></li>
+        ))}
+      </ul>
+      <p className="mt-2 text-[12px] text-fg-2">Si no puedes con alguna, ábrela y elige «No puedo» con el motivo: la coordinación la reasigna.</p>
+    </section>
+  );
+}
 
 /* ---------------- Seguimiento por checkpoints ---------------- */
 function FollowStrip({ p, role }) {
@@ -120,7 +156,7 @@ function Distribute({ p, open, onClose }) {
   };
   return (
     <Modal open={open} onClose={onClose} title="Repartir tareas sin responsable" size="lg" labelledBy="dist-title"
-           footer={<><Btn onClick={() => setRound(round + 1)} disabled={!pending.length}><Shuffle className="h-4 w-4" />Otra propuesta</Btn><Btn onClick={onClose}>Cancelar</Btn><Btn kind="primary" loading={busy} disabled={!pending.length} onClick={apply}>Asignar {pending.length} tareas</Btn></>}>
+           footer={<><Btn onClick={() => setRound(round + 1)} disabled={!pending.length}><Shuffle className="h-4 w-4" />Otra propuesta</Btn><Btn onClick={onClose}>Cancelar</Btn><Btn kind="primary" loading={busy} disabled={!pending.length} onClick={apply}>{pending.length === 1 ? 'Asignar 1 tarea' : `Asignar ${pending.length} tareas`}</Btn></>}>
       {!pending.length ? <p className="text-[14px] text-fg-2">Todas las tareas abiertas ya tienen responsable.</p> : <>
         <p className="text-[13.5px] text-fg-2">Primero las tareas más largas, a quien tenga menos horas. Ajusta lo que quieras: cada persona debe aceptar su tarea.</p>
         <div className="mt-4 flex flex-wrap gap-2">
@@ -128,10 +164,10 @@ function Distribute({ p, open, onClose }) {
         </div>
         <ul className="mt-4 divide-y divide-line overflow-hidden rounded-xl ring-1 ring-inset ring-line">
           {pending.map((t) => (
-            <li key={t.id} className="flex flex-wrap items-center gap-3 bg-card px-4 py-2.5">
-              <span className="min-w-0 flex-1 truncate text-[13.5px]">{t.title}</span>
+            <li key={t.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 bg-card px-4 py-2.5">
+              <span className="min-w-0 basis-full text-[13.5px] leading-5 sm:basis-0 sm:flex-1 sm:truncate">{t.title}</span>
               <Mono className="text-fg-2">{Number(t.hours) || 2} h</Mono>
-              <SelectField id={`dist-${t.id}`} value={map[t.id] || ''} onChange={(v) => setMap({ ...map, [t.id]: v })} className="w-44 [&_select]:h-8 [&_select]:text-[13px]" aria-label={`Responsable de ${t.title}`}>
+              <SelectField id={`dist-${t.id}`} value={map[t.id] || ''} onChange={(v) => setMap({ ...map, [t.id]: v })} className="min-w-0 flex-1 sm:w-44 sm:flex-none [&_select]:h-8 [&_select]:text-[13px]" aria-label={`Responsable de ${t.title}`}>
                 <option value="">Dejar sin asignar</option>
                 {team.map((m) => <option key={m.user_id} value={m.user_id}>{m.user_id === uid ? 'Yo' : m.profile?.display_name}</option>)}
               </SelectField>
@@ -165,6 +201,7 @@ function TasksTab({ p, role, route }) {
           <Btn kind="primary" onClick={() => setPlan(true)}>Subir consigna y repartir</Btn>
         </section>
       )}
+      <MyPending p={p} role={role} />
       <FollowStrip p={p} role={role} />
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <Segmented label="Vista" value={view} onChange={setView} options={[{ id: 'lista', label: 'Lista', icon: List }, { id: 'tablero', label: 'Tablero', icon: Columns3 }]} />

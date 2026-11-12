@@ -20,6 +20,7 @@ export function AppProvider({ children }) {
   const [online, setOnline] = useState(navigator.onLine);
   const toastId = useRef(0);
   const pushActive = useRef(false);
+  const assignBatch = useRef({ items: [], timer: null });
   const uid = session?.user?.id;
 
   /* ---------- avisos en pantalla ---------- */
@@ -112,7 +113,21 @@ export function AppProvider({ children }) {
         if (!n.read_at && !n.push_sent_at) {
           const url = n.task_id ? appUrl(`/p/${n.project_id}?tarea=${n.task_id}`) : n.project_id ? appUrl(`/p/${n.project_id}${n.kind === 'mensaje' ? '/chat' : ''}`) : appUrl('/');
           if (document.hidden) { if (!pushActive.current) localNotify(n.title, n.body, url); }
-          else toast(n.title, { icon: 'bell', notif: n });
+          // Con una ventana o panel abierto, el aviso queda en la campana y no sale encima:
+          // así nunca tapa «Confirmar», «Asignar», «Aceptar» o «No puedo» en el celular.
+          else if (!document.querySelector('[aria-modal="true"]:not([inert])')) {
+            if (n.kind === 'asignada') {
+              // Un reparto llega como varias asignaciones seguidas: se muestran como un solo aviso.
+              const b = assignBatch.current;
+              b.items.push(n);
+              clearTimeout(b.timer);
+              b.timer = setTimeout(() => {
+                const items = b.items.splice(0);
+                if (items.length === 1) toast(items[0].title, { icon: 'bell', notif: items[0] });
+                else toast(`Te tocaron ${items.length} tareas`, { icon: 'bell', notif: { ...items[0], task_id: null, body: 'Ábrelas y acéptalas desde el proyecto.' } });
+              }, 900);
+            } else toast(n.title, { icon: 'bell', notif: n });
+          }
         }
       })
       .subscribe();

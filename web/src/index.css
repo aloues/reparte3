@@ -85,3 +85,11 @@ svg.lucide { stroke-width: 1.75px; }
   .toast-bar { animation-duration: 5s !important; }
   .scan, .sk { animation: none !important; }
 }
+
+/* Ventanas: margen de 16 px que respeta el notch y la barra de inicio del iPhone (app instalada). */
+.safe-modal {
+  padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+}
+.safe-modal-box {
+  max-height: calc(100dvh - max(16px, env(safe-area-inset-top)) - max(16px, env(safe-area-inset-bottom)));
+}

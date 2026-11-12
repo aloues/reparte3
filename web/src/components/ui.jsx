@@ -152,11 +152,11 @@ export function Modal({ open, onClose, title, children, footer, size = 'md', lab
   if (!open) return null;
   const w = { sm: 'max-w-[420px]', md: 'max-w-[560px]', lg: 'max-w-[720px]' }[size];
   return (
-    <div className="fixed inset-0 z-[60] grid place-items-center p-4">
+    <div className="safe-modal fixed inset-0 z-[60] grid place-items-center">
       <button type="button" tabIndex={-1} aria-label="Cerrar" onClick={onClose} className="absolute inset-0 bg-overlay backdrop-blur-[2px]" />
       <div ref={ref} role="dialog" aria-modal="true" aria-labelledby={labelledBy}
            onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); onClose(); } }}
-           className={`anim-scale relative flex max-h-[calc(100dvh-32px)] w-full ${w} flex-col overflow-hidden rounded-2xl bg-canvas shadow-pop ring-1 ring-inset ring-line`}>
+           className={`safe-modal-box anim-scale relative flex w-full ${w} flex-col overflow-hidden rounded-2xl bg-canvas shadow-pop ring-1 ring-inset ring-line`}>
         {title && (
           <header className="flex shrink-0 items-center justify-between gap-3 border-b border-line px-6 py-4">
             <h2 id={labelledBy} className="text-[15px] font-semibold">{title}</h2>
@@ -164,7 +164,7 @@ export function Modal({ open, onClose, title, children, footer, size = 'md', lab
           </header>
         )}
         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">{children}</div>
-        {footer && <footer className="flex shrink-0 items-center justify-end gap-2 border-t border-line bg-sunk px-6 py-3.5">{footer}</footer>}
+        {footer && <footer className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-line bg-sunk px-4 py-3 sm:px-6 sm:py-3.5">{footer}</footer>}
       </div>
     </div>
   );

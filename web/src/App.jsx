@@ -158,9 +158,11 @@ function Toasts() {
   const { toasts, dismiss } = useApp();
   const icon = (k) => (k === 'error' ? AlertTriangle : k === 'info' ? Info : k === 'bell' ? Bell : CheckCheck);
   return (
-    <div aria-live="polite" className="pointer-events-none fixed bottom-0 right-0 z-[70] flex w-full max-w-[400px] flex-col gap-2"
-         style={{ paddingRight: 'max(16px, env(safe-area-inset-right, 0px))', paddingBottom: 'max(16px, env(safe-area-inset-bottom, 0px))', paddingLeft: 16 }}>
-      {toasts.map((t) => {
+    // Arriba, no abajo: así un aviso que llega en tiempo real nunca tapa «Confirmar», «Asignar» o «Aceptar»,
+    // que viven en la parte inferior de las ventanas (en el celular el aviso ocupaba todo el ancho de abajo).
+    <div aria-live="polite" className="pointer-events-none fixed right-0 top-0 z-[70] flex w-full max-w-[400px] flex-col gap-2"
+         style={{ paddingRight: 'max(16px, env(safe-area-inset-right, 0px))', paddingTop: 'max(12px, env(safe-area-inset-top, 0px))', paddingLeft: 16 }}>
+      {toasts.slice(-2).map((t) => {
         const I = icon(t.icon);
         const open = t.notif ? () => {
           const n = t.notif;
@@ -168,7 +170,8 @@ function Toasts() {
           dismiss(t.id);
         } : null;
         return (
-          <div key={t.id} role={t.icon === 'error' ? 'alert' : 'status'} className="toast anim-toast pointer-events-auto relative overflow-hidden rounded-xl bg-fg text-canvas shadow-pop">
+          // El cuerpo del aviso deja pasar los toques (pointer-events-none); solo sus botones responden.
+          <div key={t.id} role={t.icon === 'error' ? 'alert' : 'status'} className="toast anim-toast pointer-events-none relative overflow-hidden rounded-xl bg-fg text-canvas shadow-pop [&_button]:pointer-events-auto">
             <div className="flex items-start gap-3 p-3.5 pr-2.5">
               <I className={`mt-0.5 h-4 w-4 shrink-0 ${t.icon === 'bell' ? 'ring-bell' : 'opacity-80'}`} />
               <div className="min-w-0 flex-1">
