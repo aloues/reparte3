@@ -37,7 +37,7 @@ export default function ActivityFeed({ p }) {
                 <div className="flex items-start gap-3 py-2.5">
                   <Avatar name={nameOf(a.actor, p.id)} me={a.actor === uid} size="md" ring="card" />
                   <div className="min-w-0 flex-1">
-                    <p className="text-[13.5px] leading-5"><span className="font-medium">{a.actor === uid ? 'Tú' : nameOf(a.actor, p.id)}</span> <span className="text-fg-2">{a.summary.charAt(0).toLowerCase() + a.summary.slice(1)}</span></p>
+                    <p className="text-[13.5px] leading-5"><span className="font-medium">{nameOf(a.actor, p.id)}{a.actor === uid && <span className="font-normal text-fg-2"> (tú)</span>}</span> <span className="text-fg-2">{a.summary.charAt(0).toLowerCase() + a.summary.slice(1)}</span></p>
                     {t && <button type="button" onClick={() => openTask(t.id)} className="mt-0.5 text-[12.5px] text-fg underline decoration-fg-3/50 underline-offset-2 hover:decoration-fg">#{t.seq} {t.title}</button>}
                   </div>
                   <span className="flex shrink-0 items-center gap-1.5 text-[12px] text-fg-3"><I className="h-3.5 w-3.5" />{ago(a.created_at)}</span>

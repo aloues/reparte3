@@ -125,7 +125,7 @@ try {
   ok(await A.evaluate(() => document.body.innerText.includes('Reservado (2)')), 'la parte de las 2 personas que faltan queda reservada');
   await shot(A, 'reparto');
   await clickText(A, 'Confirmar y repartir');
-  await A.waitForFunction(() => location.hash.includes('/p/') && document.body.innerText.includes('Siguiente paso del proyecto'), { timeout: 20000 });
+  await A.waitForFunction(() => location.hash.includes('/p/') && document.body.innerText.includes('Qué te toca'), { timeout: 20000 });
   ok(true, 'al confirmar, el proyecto abre en Resumen con el siguiente paso');
   await shot(A, 'proyecto_resumen');
   await toTab(A, 'tareas');

@@ -50,22 +50,24 @@ export function displayStatus(t, today = todayISO()) {
   return 'todo';
 }
 export const STATUS = {
-  overdue:    { label: 'Vencida',     dot: 'bg-orange', badge: 'bg-orange/10 text-orange ring-orange/25' },
-  blocked:    { label: 'Bloqueada',   dot: 'bg-red',    badge: 'bg-red/10 text-red ring-red/25' },
-  accept:     { label: 'Por aceptar', dot: 'bg-amber',  badge: 'bg-amber/10 text-amber ring-amber/30' },
-  review:     { label: 'En revisión', dot: 'bg-violet', badge: 'bg-violet/10 text-violet ring-violet/25' },
-  progress:   { label: 'En curso',    dot: 'bg-fg-2',   badge: 'bg-hov2 text-fg ring-line' },
+  // Mismos colores que el Flujo (tokens --st-*): ámbar = en curso / en revisión, rosa = bloqueada o vencida,
+  // esmeralda = lista. El azul de acento queda para lo que pide una acción tuya (por aceptar).
+  overdue:    { label: 'Vencida',     dot: 'ring-[2px] ring-inset ring-st-blocked', badge: 'bg-transparent text-red ring-st-blocked/45' },
+  blocked:    { label: 'Bloqueada',   dot: 'bg-st-blocked', badge: 'bg-st-blocked/10 text-red ring-st-blocked/30' },
+  accept:     { label: 'Por aceptar', dot: 'bg-accent',     badge: 'bg-accent/10 text-accent ring-accent/25' },
+  review:     { label: 'En revisión', dot: 'ring-[2px] ring-inset ring-st-progress', badge: 'bg-st-progress/10 text-amber ring-st-progress/35' },
+  progress:   { label: 'En curso',    dot: 'bg-st-progress', badge: 'bg-st-progress/15 text-amber ring-st-progress/35' },
   todo:       { label: 'Pendiente',   dot: 'ring-[1.5px] ring-inset ring-fg-3', badge: 'bg-hov text-fg-2 ring-line' },
   unassigned: { label: 'Sin asignar', dot: 'border border-dashed border-fg-3', badge: 'text-fg-2 ring-line' },
   reserved:   { label: 'Reservada',   dot: 'border border-dashed border-accent', badge: 'text-accent ring-accent/30' },
-  done:      { label: 'Lista',       dot: 'bg-fg-3',   badge: 'bg-hov text-fg-2 ring-line' },
+  done:      { label: 'Aprobada',       dot: 'bg-st-done', badge: 'bg-st-done/10 text-st-done-text ring-st-done/30' },
 };
 export const COLUMNS = [
   { id: 'pendiente', label: 'Pendiente', dot: 'todo' },
   { id: 'en_curso', label: 'En curso', dot: 'progress' },
   { id: 'en_revision', label: 'En revisión', dot: 'review' },
   { id: 'bloqueada', label: 'Bloqueada', dot: 'blocked' },
-  { id: 'lista', label: 'Lista', dot: 'done' },
+  { id: 'lista', label: 'Aprobada', dot: 'done' },
 ];
 export const GROUPS = [
   { id: 'atencion', label: 'Requieren atención', st: 'blocked', test: (s) => s === 'blocked' || s === 'overdue' },
@@ -88,7 +90,8 @@ export const isPremium = (p) => p && p.plan === 'premium' && (!p.premium_until |
 
 /** Lo que me toca hacer ahora, en todos mis proyectos. */
 export function myQueue(tasks, projects, uid, today = todayISO()) {
-  const roleOf = Object.fromEntries(projects.map((p) => [p.id, p.myRole]));
+  // Un proyecto archivado no se puede editar: sus tareas no son pendientes de nadie.
+  const roleOf = Object.fromEntries(projects.filter((p) => p.status !== 'archivado').map((p) => [p.id, p.myRole]));
   const q = [];
   tasks.forEach((t) => {
     const role = roleOf[t.project_id];
@@ -96,6 +99,7 @@ export function myQueue(tasks, projects, uid, today = todayISO()) {
     if (t.assignee === uid && !t.accepted && t.status !== 'lista') q.push({ kind: 'accept', t });
     else if (t.status === 'en_revision' && t.assignee !== uid && (role === 'revisor' || role === 'coordinador')) q.push({ kind: 'review', t });
     else if (t.assignee === uid && t.status === 'bloqueada') q.push({ kind: 'blocked', t });
+    else if (t.status === 'bloqueada' && role === 'coordinador') q.push({ kind: 'unblock', t });
     else if (t.assignee === uid && t.due_date && t.due_date < today && !['lista', 'en_revision'].includes(t.status)) q.push({ kind: 'overdue', t });
   });
   const time = (x) => x.t.due_date || '9999-12-31';

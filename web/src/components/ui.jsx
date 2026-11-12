@@ -1,8 +1,11 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { Loader2, X, ChevronDown } from 'lucide-react';
+import { Loader2, X, ChevronDown, Check } from 'lucide-react';
 import { STATUS, initials } from '../lib/format';
 
-export const Dot = ({ st, className = '' }) => <span aria-hidden="true" className={`inline-block h-2 w-2 shrink-0 rounded-full ${STATUS[st].dot} ${className}`} />;
+export const Dot = ({ st, className = '', label }) => <>
+  <span aria-hidden="true" className={`inline-block h-2 w-2 shrink-0 rounded-full ${STATUS[st].dot} ${className}`} />
+  {label && <span className="sr-only">{STATUS[st].label}: </span>}
+</>;
 
 export function Badge({ st, children, dot, className = '' }) {
   return (
@@ -12,10 +15,52 @@ export function Badge({ st, children, dot, className = '' }) {
   );
 }
 export function Chip({ children, tone = 'neutral', className = '' }) {
-  const t = { neutral: 'bg-hov text-fg-2 ring-line', accent: 'bg-accent/10 text-accent ring-accent/25', red: 'bg-red/10 text-red ring-red/25', violet: 'bg-violet/10 text-violet ring-violet/25', amber: 'bg-amber/10 text-amber ring-amber/30' }[tone];
+  const t = { neutral: 'bg-hov text-fg-2 ring-line', accent: 'bg-accent/10 text-accent-ink ring-accent/25', red: 'bg-red/10 text-red ring-red/25', violet: 'bg-hov2 text-fg ring-line', amber: 'bg-amber/10 text-amber ring-amber/30' }[tone];
   return <span className={`inline-flex items-center gap-1 whitespace-nowrap rounded-md px-2 py-0.5 text-[12px] font-medium leading-5 ring-1 ring-inset ${t} ${className}`}>{children}</span>;
 }
 export const Mono = ({ children, className = '' }) => <span className={`font-mono text-[11.5px] tabular-nums ${className}`}>{children}</span>;
+
+/**
+ * La regla de los 4 tiempos (Armar · Repartir · Avanzar · Cerrar): la firma de Reparte3.
+ * `stages` viene de projectStages(). Completa: cabecera del proyecto (interactiva). Compacta: filas de Inicio.
+ */
+export function StageRail({ stages, selected, onSelect, compact = false, label = 'Tiempos del proyecto' }) {
+  const word = { done: 'hecho', current: 'actual', open: 'con pasos pendientes', todo: 'por empezar' };
+  if (compact) {
+    const cur = stages.find((s) => s.state === 'current');
+    return (
+      <span className="flex items-center gap-3" role="img" aria-label={`${label}: ${cur ? `tiempo ${cur.n}, ${cur.label}` : 'completo'}`}>
+        <span className="rail-compact" aria-hidden="true">{stages.map((s) => <span key={s.key} className={`rail-seg rail-${s.state}`} />)}</span>
+        <span className="whitespace-nowrap text-[12px] text-fg-2">{cur ? <><Mono className="text-[12px] text-accent-ink">{cur.n}</Mono> {cur.label}</> : 'Completo'}</span>
+      </span>
+    );
+  }
+  return (
+    <nav aria-label={label}>
+      <ol className="rail">
+        {stages.map((s, i) => {
+          const sel = selected === s.n;
+          const Tag = onSelect ? 'button' : 'div';
+          return (
+            <li key={s.key} className={`rail-step rail-${s.state} ${sel ? 'rail-sel' : ''}`} style={{ '--i': i }}>
+              <Tag {...(onSelect ? { type: 'button', onClick: () => onSelect(s.n), 'aria-current': sel ? 'true' : undefined, 'aria-controls': 'stage-panel' } : { role: 'group' })}
+                   aria-label={`${s.n}. ${s.label}: ${word[s.state]}. ${s.metric}`} className="rail-hit">
+                <span className="rail-seg" aria-hidden="true" />
+                <span className="rail-head">
+                  <span className="rail-n" aria-hidden="true">{s.state === 'done' ? <Check className="sw-bold h-[0.8em] w-[0.8em]" /> : s.n}</span>
+                  <span className="min-w-0">
+                    <span className="rail-label">{s.label}{s.state === 'current' && <span className="rail-now" aria-hidden="true">ahora</span>}{s.state === 'open' && <span className="rail-flag" aria-hidden="true" />}</span>
+                    <span className="rail-metric">{s.metric}</span>
+                  </span>
+                </span>
+              </Tag>
+            </li>
+          );
+        })}
+      </ol>
+    </nav>
+  );
+}
 
 export function Avatar({ name = '?', me, size = 'md', ring = 'canvas', pending, title }) {
   const sz = { lg: 'h-9 w-9 text-[12.5px]', md: 'h-7 w-7 text-[11px]', sm: 'h-6 w-6 text-[10px]', xl: 'h-12 w-12 text-[15px]' }[size];
@@ -24,9 +69,9 @@ export function Avatar({ name = '?', me, size = 'md', ring = 'canvas', pending, 
 }
 export function AvatarStack({ people, max = 4, ring = 'card' }) {
   return (
-    <div className="group/av flex items-center" aria-label={`Equipo: ${people.map((p) => p.name).join(', ')}`}>
-      {people.slice(0, max).map((p, i) => <span key={p.id} className={`transition-[margin] duration-200 ${i ? '-ml-2 group-hover/av:ml-0.5' : ''}`}><Avatar name={p.name} me={p.me} ring={ring} /></span>)}
-      {people.length > max && <span className="-ml-2 inline-grid h-7 min-w-[28px] place-items-center rounded-full bg-hov2 px-1 font-mono text-[10.5px] text-fg-2" style={{ boxShadow: `0 0 0 2px rgb(var(--${ring}))` }}>+{people.length - max}</span>}
+    <div className="group/av flex items-center" role="img" aria-label={`Equipo: ${people.map((p) => p.name).join(', ')}`}>
+      {people.slice(0, max).map((p, i) => <span key={p.id} style={{ zIndex: max - i }} className={`relative transition-[margin] duration-200 ${i ? '-ml-1 group-hover/av:ml-0.5' : ''}`}><Avatar name={p.name} me={p.me} ring={ring} /></span>)}
+      {people.length > max && <span className="relative -ml-1 inline-grid h-7 min-w-[28px] place-items-center rounded-full bg-hov2 px-1 font-mono text-[10.5px] text-fg-2" style={{ boxShadow: `0 0 0 2px rgb(var(--${ring}))` }}>+{people.length - max}</span>}
     </div>
   );
 }
@@ -51,32 +96,53 @@ export const IconBtn = ({ label, children, className = '', ...rest }) => (
   <button type="button" aria-label={label} title={label} className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg text-fg-2 transition-all duration-200 hover:bg-hov hover:text-fg disabled:opacity-30 ${className}`} {...rest}>{children}</button>
 );
 
-export function UnderlineTabs({ tabs, value, onChange, label }) {
+export function UnderlineTabs({ tabs, value, onChange, label, fill = false }) {
   const refs = useRef({});
+  const bar = useRef(null);
   const [ind, setInd] = useState({ left: 0, width: 0, ready: false });
+  const [edge, setEdge] = useState({ l: false, r: false });
+  const shown = useRef(null);
   const sig = tabs.map((t) => `${t.id}${t.count ?? ''}`).join();
+  // En pantallas angostas las pestañas se desplazan: un desvanecido en el borde avisa que hay más.
+  const measure = () => {
+    const b = bar.current; if (!b) return;
+    const l = b.scrollLeft > 2, r = b.scrollLeft + b.clientWidth < b.scrollWidth - 2;
+    setEdge((e) => (e.l === l && e.r === r ? e : { l, r }));
+  };
   useLayoutEffect(() => {
-    const up = () => { const el = refs.current[value]; if (el) setInd({ left: el.offsetLeft, width: el.offsetWidth, ready: true }); };
+    const up = () => {
+      const el = refs.current[value];
+      if (el) {
+        setInd({ left: el.offsetLeft, width: el.offsetWidth, ready: true });
+        const b = bar.current;
+        if (b && shown.current !== value && (el.offsetLeft < b.scrollLeft || el.offsetLeft + el.offsetWidth > b.scrollLeft + b.clientWidth)) b.scrollTo({ left: el.offsetLeft - 24, behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+      }
+      if (el) shown.current = value;
+      measure();
+    };
     up();
     document.fonts?.ready.then(up);
     window.addEventListener('resize', up);
     return () => window.removeEventListener('resize', up);
   }, [value, sig]);
   const onKey = (e) => {
-    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+    if (!['ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(e.key)) return;
+    e.preventDefault();
     const i = tabs.findIndex((t) => t.id === value);
-    const n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length];
+    const n = e.key === 'Home' ? tabs[0] : e.key === 'End' ? tabs[tabs.length - 1] : tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length];
     onChange(n.id); refs.current[n.id]?.focus();
   };
   return (
-    <div role="tablist" aria-label={label} onKeyDown={onKey} className="no-scrollbar relative flex gap-1 overflow-x-auto">
+    <div ref={bar} role="tablist" aria-label={label} onKeyDown={onKey} onScroll={measure}
+         style={edge.l || edge.r ? { WebkitMaskImage: `linear-gradient(to right, ${edge.l ? 'transparent, #000 32px' : '#000'}, ${edge.r ? '#000 calc(100% - 40px), transparent' : '#000'})`, maskImage: `linear-gradient(to right, ${edge.l ? 'transparent, #000 32px' : '#000'}, ${edge.r ? '#000 calc(100% - 40px), transparent' : '#000'})` } : undefined}
+         className="no-scrollbar relative flex gap-1 overflow-x-auto">
       {tabs.map((t) => {
         const sel = t.id === value; const I = t.icon;
         return (
-          <button key={t.id} ref={(el) => { refs.current[t.id] = el; }} role="tab" aria-selected={sel} tabIndex={sel ? 0 : -1} onClick={() => onChange(t.id)}
-                  className={`relative flex h-10 shrink-0 items-center gap-2 px-3 text-[13.5px] transition-colors duration-200 ${sel ? 'font-medium text-fg' : 'text-fg-2 hover:text-fg'}`}>
+          <button key={t.id} ref={(el) => { refs.current[t.id] = el; }} role="tab" id={`tab-${t.id}`} aria-controls="tabpanel" aria-selected={sel} tabIndex={sel ? 0 : -1} onClick={() => onChange(t.id)}
+                  className={`relative flex h-10 shrink-0 items-center gap-2 px-3 text-[13.5px] transition-colors duration-200 focus-visible:outline-offset-[-2px] ${fill ? 'max-sm:h-14 max-sm:flex-1 max-sm:flex-col max-sm:justify-center max-sm:gap-1 max-sm:px-1 max-sm:text-[11.5px]' : ''} ${sel ? 'font-medium text-fg' : 'text-fg-2 hover:text-fg'}`}>
             {I && <I className={`h-4 w-4 ${sel ? 'text-fg' : 'text-fg-3'}`} />}{t.label}
-            {t.count != null && t.count !== 0 && <Mono className={t.alert ? 'rounded bg-accent px-1 text-on-accent' : 'text-fg-3'}>{t.count}</Mono>}
+            {t.count != null && t.count !== 0 && <Mono className={`${t.alert ? 'rounded bg-accent px-1 text-on-accent' : 'text-fg-3'} ${fill ? 'max-sm:absolute max-sm:right-1 max-sm:top-1.5' : ''}`}>{t.count}</Mono>}
           </button>
         );
       })}
@@ -87,11 +153,19 @@ export function UnderlineTabs({ tabs, value, onChange, label }) {
 
 export function Segmented({ options, value, onChange, label }) {
   return (
-    <div role="radiogroup" aria-label={label} className="inline-flex rounded-lg bg-hov p-0.5 ring-1 ring-inset ring-line">
+    <div role="radiogroup" aria-label={label} className="inline-flex rounded-lg bg-hov p-0.5 ring-1 ring-inset ring-line"
+         onKeyDown={(e) => {
+           if (!['ArrowRight', 'ArrowLeft', 'ArrowDown', 'ArrowUp'].includes(e.key)) return;
+           e.preventDefault();
+           const i = options.findIndex((o) => o.id === value);
+           const n = options[(i + (['ArrowRight', 'ArrowDown'].includes(e.key) ? 1 : options.length - 1)) % options.length];
+           onChange(n.id);
+           requestAnimationFrame(() => e.currentTarget?.querySelector(`[data-id="${n.id}"]`)?.focus());
+         }}>
       {options.map((o) => {
         const sel = o.id === value; const I = o.icon;
         return (
-          <button key={o.id} type="button" role="radio" aria-checked={sel} onClick={() => onChange(o.id)}
+          <button key={o.id} type="button" role="radio" data-id={o.id} aria-checked={sel} tabIndex={sel ? 0 : -1} onClick={() => onChange(o.id)}
                   className={`flex h-7 items-center gap-1.5 rounded-md px-2.5 text-[12.5px] transition-all duration-200 ${sel ? 'bg-card font-medium text-fg shadow-xs ring-1 ring-inset ring-line' : 'text-fg-2 hover:text-fg'}`}>
             {I && <I className="h-3.5 w-3.5" />}{o.label}
           </button>

@@ -15,19 +15,20 @@ import { appUrl, go } from '../lib/router';
 import { Btn, Mono, Avatar, Chip, SelectField } from './ui';
 import { DropZone } from './Chat';
 
-const STEPS = ['Grupo', 'Consigna', 'Reparto'];
+// Los pasos del asistente son los dos primeros tiempos del proyecto: 1 Armar (grupo y consigna) y 2 Repartir.
+const STEPS = [['Grupo', 'Armar'], ['Consigna', 'Armar'], ['Reparto', 'Repartir']];
 function Stepper({ step }) {
   return (
-    <ol className="flex items-center gap-2" aria-label="Pasos">
-      {STEPS.map((s, i) => {
+    <ol className="grid grid-cols-3 gap-2" aria-label="Pasos">
+      {STEPS.map(([s, time], i) => {
         const n = i + 1; const done = step > n; const cur = step === n;
         return (
-          <li key={s} className="flex flex-1 items-center gap-2" aria-current={cur ? 'step' : undefined}>
-            <span className={`grid h-6 w-6 shrink-0 place-items-center rounded-full text-[11.5px] font-semibold transition-all duration-300 ${done ? 'bg-fg text-canvas' : cur ? 'bg-accent text-on-accent' : 'bg-hov2 text-fg-2'}`}>
-              {done ? <Check className="sw-bold pop h-3.5 w-3.5" /> : n}
+          <li key={s} className="flex flex-col gap-2" aria-current={cur ? 'step' : undefined}>
+            <span aria-hidden="true" className={`block h-[3px] rounded-full transition-colors duration-300 ${done ? 'bg-fg' : cur ? 'bg-accent' : 'bg-hov2'}`} />
+            <span className="flex items-baseline gap-1.5">
+              <span className={`font-mono text-[15px] tabular-nums ${done ? 'text-fg' : cur ? 'text-accent-ink' : 'text-fg-3'}`}>{done ? <><Check className="sw-bold pop inline h-3.5 w-3.5" /><span className="sr-only">(hecho)</span></> : <span aria-hidden="true" className={`inline-block h-2 w-2 rounded-full ${cur ? 'bg-accent' : 'ring-1 ring-inset ring-fg-3'}`} />}</span>
+              <span className={`text-[12.5px] ${cur || done ? 'font-medium text-fg' : 'text-fg-2'}`}>{s}</span>
             </span>
-            <span className={`hidden text-[12.5px] sm:inline ${cur || done ? 'font-medium text-fg' : 'text-fg-2'}`}>{s}</span>
-            {i < STEPS.length - 1 && <span className="relative mx-1 h-px flex-1 overflow-hidden bg-line"><span className="absolute inset-y-0 left-0 bg-fg transition-all duration-500" style={{ width: done ? '100%' : '0%' }} /></span>}
           </li>
         );
       })}
@@ -170,7 +171,7 @@ function PlanStep({ pid, brief, setBrief, rows, setRows, result, setResult }) {
         <button type="button" onClick={() => { setPhase('manual'); setRows([toRow({ title: '', hours: 2, phase: 'desarrollo', kind: 'requisito', lines: [], depends: [] }, 'manual')]); setMode(null); setResult({ warnings: [], questions: [], source: 'manual' }); }}
                 className="self-center text-[13px] font-medium text-fg-2 underline decoration-fg-3/50 underline-offset-4 hover:text-fg">No tengo consigna: escribir las tareas a mano</button>
       </>}
-      {phase === 'reading' && <p className="flex items-center gap-2 text-[13.5px]"><Loader2 className="h-4 w-4 animate-spin text-accent" />Leyendo el documento…</p>}
+      {phase === 'reading' && <p className="flex items-center gap-2 text-[13.5px]"><Loader2 className="h-4 w-4 animate-spin text-accent-ink" />Leyendo el documento…</p>}
 
       {phase === 'ready' && brief && <>
         <p className="flex flex-wrap items-center gap-2 text-[13px]">
@@ -189,7 +190,7 @@ function PlanStep({ pid, brief, setBrief, rows, setRows, result, setResult }) {
                 <span className="block text-[15px] font-semibold">Planificar con IA</span>
                 <span className="mt-0.5 block text-[12.5px] leading-5 text-fg-2">La IA lee la consigna y la divide en tareas parejas para tu grupo, con fases, horas y checkpoints. Tú revisas antes de repartir.</span>
               </span>
-              <ArrowRight className="h-4 w-4 shrink-0 text-accent transition-transform group-hover:translate-x-0.5" />
+              <ArrowRight className="h-4 w-4 shrink-0 text-accent-ink transition-transform group-hover:translate-x-0.5" />
             </button>
             <button type="button" onClick={useFormat} className="flex items-center gap-2 self-start rounded-lg px-2 py-1.5 text-[13px] font-medium text-fg-2 hover:bg-hov hover:text-fg">
               <ScanText className="h-4 w-4" />O usa la detección rápida, sin IA
@@ -202,14 +203,14 @@ function PlanStep({ pid, brief, setBrief, rows, setRows, result, setResult }) {
           <div className="anim-enter grid gap-5 rounded-xl bg-card p-5 ring-1 ring-inset ring-line sm:grid-cols-[120px_minmax(0,1fr)] sm:items-center" aria-live="polite">
             <div className="relative mx-auto h-36 w-[120px] overflow-hidden rounded-lg bg-canvas p-3 shadow-xs ring-1 ring-inset ring-line">
               {[80, 95, 60, 0, 90, 70, 85, 0, 75, 92].map((w, i) => (w
-                ? <span key={i} className={`mb-2 block h-1.5 rounded-full transition-colors duration-700 ${ai.step >= 1 && [1, 4, 8].includes(i) ? 'bg-accent/50' : ai.step >= 2 && [2, 6, 9].includes(i) ? 'bg-violet/40' : 'bg-fg/10'}`} style={{ width: `${w}%` }} />
+                ? <span key={i} className={`mb-2 block h-1.5 rounded-full transition-colors duration-700 ${ai.step >= 1 && [1, 4, 8].includes(i) ? 'bg-accent/50' : ai.step >= 2 && [2, 6, 9].includes(i) ? 'bg-accent/25' : 'bg-fg/10'}`} style={{ width: `${w}%` }} />
                 : <span key={i} className="mb-2 block h-1.5" />))}
               <span aria-hidden="true" className="scan pointer-events-none absolute inset-x-0 top-0 h-12" style={{ background: 'linear-gradient(to bottom, transparent, rgb(var(--accent) / .22), transparent)' }} />
             </div>
             <ol className="flex flex-col gap-2.5">
               {AI_STEPS.map((s, i) => (
                 <li key={s} className={`flex items-center gap-3 text-[13.5px] ${ai.step > i ? 'text-fg' : ai.step === i ? 'font-medium text-fg' : 'text-fg-3'}`}>
-                  <span className="grid h-5 w-5 place-items-center">{ai.step > i ? <Check className="sw-bold pop h-4 w-4" /> : ai.step === i ? <Loader2 className="h-4 w-4 animate-spin text-accent" /> : <span className="h-1.5 w-1.5 rounded-full bg-fg-3" />}</span>{s}
+                  <span className="grid h-5 w-5 place-items-center">{ai.step > i ? <Check className="sw-bold pop h-4 w-4" /> : ai.step === i ? <Loader2 className="h-4 w-4 animate-spin text-accent-ink" /> : <span className="h-1.5 w-1.5 rounded-full bg-fg-3" />}</span>{s}
                 </li>
               ))}
               <li className="pl-8 text-[12px] text-fg-2">Suele tardar entre 20 y 60 segundos.</li>
@@ -258,7 +259,7 @@ function PlanStep({ pid, brief, setBrief, rows, setRows, result, setResult }) {
                 </div>
                 <div className="ml-6 mt-1 flex flex-wrap items-center gap-1.5 text-[11.5px] text-fg-2">
                   <button type="button" onClick={() => upd(r.key, { kind: r.kind === 'sugerencia' ? 'requisito' : 'sugerencia' })} title="Cambiar entre requisito y sugerencia"
-                          className={`rounded px-1.5 py-0.5 ring-1 ring-inset ${r.kind === 'sugerencia' ? 'text-violet ring-violet/30' : 'ring-line'}`}>{KINDS[r.kind] || 'Requisito'}</button>
+                          className={`rounded px-1.5 py-0.5 ring-1 ring-inset ${r.kind === 'sugerencia' ? 'text-accent-ink ring-accent/30' : 'ring-line'}`}>{KINDS[r.kind] || 'Requisito'}</button>
                   <label htmlFor={`wz-ph-${r.key}`} className="sr-only">Fase</label>
                   <select id={`wz-ph-${r.key}`} value={r.phase} onChange={(e) => upd(r.key, { phase: e.target.value })} className="rounded bg-transparent px-1 py-0.5 ring-1 ring-inset ring-line">
                     {Object.entries(PHASES).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
@@ -341,7 +342,7 @@ function SplitStep({ split, overrides, setOverrides }) {
           ))}
           {reservedSlots.length > 0 && (
             <li className="grid grid-cols-[minmax(0,130px)_minmax(0,1fr)_56px] items-center gap-3 text-[13px]">
-              <span className="flex min-w-0 items-center gap-2 text-accent"><Avatar pending size="sm" ring="card" /><span className="truncate">Reservado ({reservedSlots.length})</span></span>
+              <span className="flex min-w-0 items-center gap-2 text-accent-ink"><Avatar pending size="sm" ring="card" /><span className="truncate">Reservado ({reservedSlots.length})</span></span>
               <span className="relative h-2.5 overflow-hidden rounded-full bg-hov2"><span className="absolute inset-y-0 left-0 rounded-full border border-dashed border-accent bg-accent/20" style={{ width: `${(reservedHours / reservedSlots.length / max) * 100}%` }} /></span>
               <Mono className="text-right">{reservedHours.toFixed(1)} h</Mono>
             </li>

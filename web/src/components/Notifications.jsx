@@ -15,7 +15,7 @@ const KIND = {
   bloqueo: Ban, desbloqueo: Play, mensaje: MessageCircle, comentario: MessageSquare, recordatorio: Clock,
   vencida: AlertTriangle, por_aceptar: Clock, miembro: Users, fecha: Calendar,
 };
-const TONE = { bloqueo: 'text-red', vencida: 'text-orange', rechazada: 'text-amber', por_aceptar: 'text-amber', entrega: 'text-violet', cambios: 'text-violet' };
+const TONE = { bloqueo: 'text-red', vencida: 'text-orange', rechazada: 'text-red', por_aceptar: 'text-accent-ink', entrega: 'text-amber', cambios: 'text-amber' };
 
 export default function NotificationsPanel({ open, onClose }) {
   const { notifs, markRead, clearNotifs, project, toast } = useApp();
@@ -40,7 +40,7 @@ export default function NotificationsPanel({ open, onClose }) {
       <button type="button" tabIndex={-1} aria-label="Cerrar" onClick={onClose} className={`absolute inset-0 bg-overlay transition-opacity duration-300 ${open ? 'opacity-100' : 'opacity-0'}`} />
       <aside role="dialog" aria-modal="true" aria-labelledby="nt-title" inert={open ? undefined : ''}
              onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
-             className={`absolute inset-y-0 right-0 flex w-full flex-col border-l border-line bg-canvas shadow-pop transition-transform duration-300 ease-[cubic-bezier(.2,.8,.2,1)] sm:w-[420px] ${open ? 'translate-x-0' : 'translate-x-full'}`}
+             className={`absolute inset-y-0 right-0 flex w-full flex-col border-l border-line bg-canvas shadow-pop transition-[transform,visibility] duration-300 ease-[cubic-bezier(.2,.8,.2,1)] sm:w-[420px] ${open ? 'visible translate-x-0' : 'invisible translate-x-full'}`}
              style={{ paddingTop: 'env(safe-area-inset-top, 0px)', paddingRight: 'env(safe-area-inset-right, 0px)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
         <header className="flex h-14 shrink-0 items-center gap-2 border-b border-line px-5">
           <Bell className="h-4 w-4 text-fg-3" />
@@ -53,7 +53,7 @@ export default function NotificationsPanel({ open, onClose }) {
 
         {push === false && pushSupported() && (
           <div className="m-4 mb-0 flex items-start gap-3 rounded-xl bg-accent/[.06] p-3.5 ring-1 ring-inset ring-accent/20">
-            <BellRing className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
+            <BellRing className="mt-0.5 h-4 w-4 shrink-0 text-accent-ink" />
             <div className="min-w-0 flex-1">
               <p className="text-[13px] font-medium">Recibe avisos aunque cierres la app</p>
               <p className="mt-0.5 text-[12.5px] text-fg-2">Mensajes del grupo, tareas nuevas y recordatorios de entrega en este dispositivo.</p>

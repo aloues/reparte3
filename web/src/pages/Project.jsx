@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   ListChecks, MessageCircle, Users, FileText, Settings, List, Columns3, Plus, Shuffle, Calendar, Sparkles, Copy, Check, Trash2,
-  Link2, UserPlus, LogOut, Archive, GraduationCap, Info, Paperclip, LayoutDashboard, GitBranch, Activity as ActivityIcon,
+  Link2, UserPlus, LogOut, Archive, GraduationCap, Info, Paperclip, LayoutDashboard, GitBranch, FolderOpen, ArrowLeft,
 } from 'lucide-react';
 import { useApp } from '../lib/store';
 import { useLocal } from '../lib/hooks';
 import { go, appUrl } from '../lib/router';
 import { ROLES, fmtShort, relDays, isPremium, ago, todayISO } from '../lib/format';
 import { proposeDistribution } from '../lib/detect';
-import { Btn, Chip, Mono, Avatar, AvatarStack, UnderlineTabs, Segmented, Empty, Spinner, Modal, SelectField, IconBtn } from '../components/ui';
+import { Btn, Chip, Mono, Avatar, AvatarStack, UnderlineTabs, Segmented, Empty, Spinner, Modal, SelectField, IconBtn, StageRail } from '../components/ui';
 import { ListView, BoardView, openTask } from '../components/TaskViews';
 import { Messages } from '../components/Chat';
 import Wizard from '../components/Wizard';
@@ -17,7 +17,7 @@ import Flow from '../components/project/Flow';
 import Brief from '../components/project/Brief';
 import Resources from '../components/project/Resources';
 import ActivityFeed from '../components/project/ActivityFeed';
-import { progressOf } from '../lib/center';
+import { projectStages } from '../lib/center';
 import { followUp, TRACK } from '../lib/plan';
 
 /* ---------------- Mis tareas por aceptar: aceptar la lista completa ---------------- */
@@ -36,7 +36,7 @@ function MyPending({ p, role }) {
     if (ok) toast(ok === 1 ? 'Aceptaste tu tarea.' : `Aceptaste tus ${ok} tareas.`);
   };
   return (
-    <section className="anim-enter mb-5 rounded-xl bg-amber/[.07] p-4 ring-1 ring-inset ring-amber/25" aria-label="Tareas por aceptar">
+    <section className="anim-enter mb-5 rounded-xl bg-accent/[.06] p-4 ring-1 ring-inset ring-accent/25" aria-label="Tareas por aceptar">
       <div className="flex flex-wrap items-center gap-3">
         <p className="min-w-0 flex-1 text-[14px]">
           <span className="font-semibold">{mine.length === 1 ? 'Te tocó 1 tarea' : `Te tocaron ${mine.length} tareas`}</span>
@@ -46,7 +46,7 @@ function MyPending({ p, role }) {
       </div>
       <ul className="mt-3 flex flex-col gap-1.5">
         {mine.map((t) => (
-          <li key={t.id}><button type="button" onClick={() => openTask(t.id)} className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[13px] hover:bg-amber/10">
+          <li key={t.id}><button type="button" onClick={() => openTask(t.id)} className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[13px] hover:bg-accent/10">
             <span className="min-w-0 flex-1 truncate">{t.title}</span><Mono className="shrink-0 text-fg-2">{Number(t.hours) || 2} h</Mono><span className="shrink-0 text-fg-2">{fmtShort(t.due_date)}</span>
           </button></li>
         ))}
@@ -100,7 +100,7 @@ function FollowStrip({ p, role }) {
       {reserved.length > 0 && (
         <div className={`flex flex-wrap items-center gap-3 ${cps.length ? 'mt-4 border-t border-line pt-4' : ''}`}>
           <p className="min-w-0 flex-1 text-[13px]">
-            <span className="font-medium text-accent">{reserved.length === 1 ? '1 tarea reservada' : `${reserved.length} tareas reservadas`}</span>
+            <span className="font-medium text-accent-ink">{reserved.length === 1 ? '1 tarea reservada' : `${reserved.length} tareas reservadas`}</span>
             <span className="text-fg-2"> {missing > 0 ? `para ${missing === 1 ? 'la persona que falta' : `las ${missing} personas que faltan`}. Se asignan solas cuando entren.` : 'esperando a alguien más.'}</span>
           </p>
           {role === 'coordinador' && <Btn kind="secondary" size="sm" loading={busy} onClick={async () => { setBusy(true); await releaseReserved(p.id); setBusy(false); }}>Ya estamos todos: repartir</Btn>}
@@ -184,9 +184,12 @@ function Distribute({ p, open, onClose }) {
   );
 }
 
-function TasksTab({ p, role, route }) {
+function TasksTab({ p, role, route, map }) {
   const { tasks } = useApp();
-  const [view, setView] = useLocal('r3-pview', 'lista');
+  const [saved, setSaved] = useLocal('r3-pview', 'lista');
+  const view = map ? 'mapa' : saved === 'tablero' ? 'tablero' : 'lista';
+  // El Mapa (antes «Flujo») es otra forma de ver las mismas tareas; vive en su propia ruta para poder compartirla.
+  const setView = (v) => { if (v === 'mapa') go(`/p/${p.id}/flujo`); else { setSaved(v); if (map) go(`/p/${p.id}/tareas`); } };
   const [adding, setAdding] = useState(false);
   const [dist, setDist] = useState(false);
   const [plan, setPlan] = useState(false);
@@ -198,7 +201,7 @@ function TasksTab({ p, role, route }) {
     <div>
       {coord && p.status === 'activo' && !ts.length && (
         <section className="anim-enter mb-5 flex flex-wrap items-center gap-4 rounded-xl bg-accent/[.06] p-5 ring-1 ring-inset ring-accent/30">
-          <Sparkles className="h-6 w-6 shrink-0 text-accent" />
+          <Sparkles className="h-6 w-6 shrink-0 text-accent-ink" />
           <div className="min-w-0 flex-1">
             <h3 className="text-[15px] font-semibold">Arma el plan del grupo</h3>
             <p className="mt-0.5 text-[13px] text-fg-2">Sube la consigna, conviértela en tareas con IA (gratis) y repártelas en partes iguales con checkpoints.</p>
@@ -206,21 +209,34 @@ function TasksTab({ p, role, route }) {
           <Btn kind="primary" onClick={() => setPlan(true)}>Subir consigna y repartir</Btn>
         </section>
       )}
-      <MyPending p={p} role={role} />
-      <FollowStrip p={p} role={role} />
+      {view !== 'mapa' && <><MyPending p={p} role={role} /><FollowStrip p={p} role={role} /></>}
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <Segmented label="Vista" value={view} onChange={setView} options={[{ id: 'lista', label: 'Lista', icon: List }, { id: 'tablero', label: 'Tablero', icon: Columns3 }]} />
+        <Segmented label="Vista" value={view} onChange={setView} options={[{ id: 'lista', label: 'Lista', icon: List }, { id: 'tablero', label: 'Tablero', icon: Columns3 }, { id: 'mapa', label: 'Mapa', icon: GitBranch }]} />
         <div className="flex flex-wrap gap-2">
           {coord && unassigned > 0 && <Btn kind="secondary" onClick={() => setDist(true)}><Shuffle className="h-4 w-4" />Repartir {unassigned}</Btn>}
-          {canAdd && <Btn kind={ts.length ? 'secondary' : 'primary'} onClick={() => setAdding(!adding)}><Plus className="h-4 w-4" />Tarea</Btn>}
+          {canAdd && ts.length > 0 && view !== 'mapa' && <Btn kind="secondary" onClick={() => setAdding(!adding)}><Plus className="h-4 w-4" />Tarea</Btn>}
         </div>
       </div>
-      {adding && <AddTask p={p} coord={coord} onDone={() => {}} />}
-      {view === 'lista'
-        ? <ListView tasks={ts} selectedId={route.query.tarea} empty={<Empty icon={ListChecks} title="Este proyecto aún no tiene tareas" text={coord ? 'Añádelas a mano o súbelas desde la consigna.' : 'La coordinación todavía no reparte el trabajo.'}>{canAdd && <Btn kind="primary" onClick={() => setAdding(true)}><Plus className="h-4 w-4" />Añadir tarea</Btn>}</Empty>} />
+      {adding && view !== 'mapa' && <AddTask p={p} coord={coord} onDone={() => {}} />}
+      {view === 'mapa' ? <Flow p={p} /> : view === 'lista'
+        ? <ListView tasks={ts} selectedId={route.query.tarea} empty={<Empty icon={ListChecks} title="Este proyecto aún no tiene tareas" text={coord ? 'Añádelas a mano o súbelas desde la consigna.' : 'La coordinación todavía no reparte el trabajo.'}>{canAdd && <Btn kind={coord ? 'secondary' : 'primary'} onClick={() => setAdding(true)}><Plus className="h-4 w-4" />Añadir tarea</Btn>}</Empty>} />
         : <BoardView tasks={ts} selectedId={route.query.tarea} />}
       {coord && <Distribute p={p} open={dist} onClose={() => setDist(false)} />}
       {coord && <Wizard open={plan} projectId={p.id} onClose={() => setPlan(false)} />}
+    </div>
+  );
+}
+
+/* ---------------- Material: consigna + archivos y enlaces ---------------- */
+function MaterialTab({ p, role, sub }) {
+  const view = sub === 'archivos' ? 'archivos' : 'consigna';
+  return (
+    <div>
+      <div className="mb-4">
+        <Segmented label="Material" value={view} onChange={(v) => go(`/p/${p.id}/${v}`)}
+                   options={[{ id: 'consigna', label: 'Consigna', icon: FileText }, { id: 'archivos', label: 'Archivos y enlaces', icon: Paperclip }]} />
+      </div>
+      {view === 'consigna' ? <Brief p={p} role={role} /> : <Resources p={p} role={role} onTab={(t) => go(`/p/${p.id}${t === 'resumen' ? '' : `/${t}`}`)} />}
     </div>
   );
 }
@@ -344,13 +360,13 @@ function SettingsTab({ p, role }) {
         </form>
       )}
       <section className="rounded-xl bg-card p-5 ring-1 ring-inset ring-line">
-        <h2 className="flex items-center gap-2 text-[14px] font-semibold"><Sparkles className="h-4 w-4 text-accent" />Plan</h2>
+        <h2 className="flex items-center gap-2 text-[14px] font-semibold"><Sparkles className="h-4 w-4 text-accent-ink" />Plan</h2>
         <p className="mt-1 text-[13.5px] text-fg-2">{isPremium(p) ? 'Premium activo: chat, avisos en el celular y recordatorios automáticos. Gratis durante el lanzamiento.' : 'Plan gratis: tareas y reparto. El chat y los recordatorios son parte de Premium.'}</p>
       </section>
       {coord && (
         <section className="rounded-xl bg-card p-5 ring-1 ring-inset ring-line">
           <h2 className="text-[14px] font-semibold">{p.status === 'activo' ? 'Archivar' : 'Reactivar'}</h2>
-          <p className="mt-1 text-[13.5px] text-fg-2">{p.status === 'activo' ? 'Cuando entreguen, archiva el proyecto: deja de aparecer en Inicio y no se puede editar.' : 'El proyecto está archivado. Reactívalo para seguir trabajando.'}</p>
+          <p className="mt-1 text-[13.5px] text-fg-2">{p.status === 'activo' ? 'Cuando entreguen, archiva el proyecto: deja de aparecer en Hoy y no se puede editar.' : 'El proyecto está archivado. Reactívalo para seguir trabajando.'}</p>
           <Btn kind="secondary" className="mt-4" onClick={() => updateProject(p.id, { status: p.status === 'activo' ? 'archivado' : 'activo' }, p.status === 'activo' ? 'Proyecto archivado.' : 'Proyecto reactivado.')}><Archive className="h-4 w-4" />{p.status === 'activo' ? 'Archivar proyecto' : 'Reactivar proyecto'}</Btn>
         </section>
       )}
@@ -378,61 +394,75 @@ function SettingsTab({ p, role }) {
 }
 
 /* ---------------- página ---------------- */
+// Las rutas antiguas siguen funcionando: /flujo es la vista Mapa de Tareas; /consigna y /archivos viven en Material;
+// /actividad se abre desde el Resumen.
+const TAB_OF = { flujo: 'tareas', consigna: 'material', archivos: 'material', actividad: 'resumen', ajustes: null };
+
 export default function ProjectPage({ id, tab, route }) {
-  const { project, loaded, tasks, membersOf, uid, notifs } = useApp();
+  const { project, loaded, tasks, membersOf, uid, notifs, checkpoints } = useApp();
   const p = project(id);
   const ts = useMemo(() => tasks.filter((t) => t.project_id === id), [tasks, id]);
   if (!loaded) return <Spinner />;
-  if (!p) return <Empty icon={Info} title="No encontramos este proyecto" text="Puede que lo hayan eliminado o que ya no estés en el grupo."><Btn kind="primary" onClick={() => go('/')}>Ir al inicio</Btn></Empty>;
+  if (!p) return <Empty icon={Info} title="No encontramos este proyecto" text="Puede que lo hayan eliminado o que ya no estés en el grupo."><Btn kind="primary" onClick={() => go('/')}>Ir a Hoy</Btn></Empty>;
   const role = p.myRole;
-  const prog = progressOf(ts);
+  const members = membersOf(id);
+  const st = projectStages({ project: p, tasks: ts, members, checkpoints: checkpoints.filter((c) => c.project_id === id) });
   const chatUnread = notifs.filter((n) => !n.read_at && n.kind === 'mensaje' && n.project_id === id).length;
-  const toTab = (t) => go(`/p/${id}${t === 'resumen' ? '' : `/${t}`}`);
+  const active = tab in TAB_OF ? TAB_OF[tab] : tab;
+  const toTab = (t) => go(`/p/${id}${t === 'resumen' ? '' : t === 'material' ? '/consigna' : `/${t}`}`);
+  // En el Resumen se ve el detalle de un tiempo: el elegido en la regla (?tiempo=n) o el actual.
+  const asked = Number(route.query.tiempo);
+  const stageSel = tab === 'resumen' ? ([1, 2, 3, 4].includes(asked) ? asked : st.current?.n || 4) : null;
+  const team = <>
+    <button type="button" onClick={() => toTab('equipo')} aria-label="Ver equipo" className="rounded-full"><AvatarStack ring="canvas" people={members.map((m) => ({ id: m.user_id, name: m.profile?.display_name || '?', me: m.user_id === uid }))} /></button>
+    <IconBtn label="Ajustes del proyecto" onClick={() => toTab('ajustes')} className={`h-9 w-9 ring-1 ring-inset ring-line ${tab === 'ajustes' ? 'bg-hov2 text-fg' : ''}`}><Settings className="h-4 w-4" /></IconBtn>
+  </>;
   const tabs = [
     { id: 'resumen', label: 'Resumen', icon: LayoutDashboard },
-    { id: 'tareas', label: 'Tareas', icon: ListChecks, count: ts.filter((t) => t.status !== 'lista').length },
-    { id: 'flujo', label: 'Flujo', icon: GitBranch },
-    { id: 'consigna', label: 'Consigna', icon: FileText },
-    { id: 'archivos', label: 'Archivos', icon: Paperclip },
+    { id: 'tareas', label: 'Tareas', icon: ListChecks, count: st.counts.open },
+    { id: 'material', label: 'Material', icon: FolderOpen },
     { id: 'chat', label: 'Chat', icon: MessageCircle, count: chatUnread, alert: chatUnread > 0 },
-    { id: 'actividad', label: 'Actividad', icon: ActivityIcon },
-    { id: 'equipo', label: 'Equipo', icon: Users, count: membersOf(id).length },
+    { id: 'equipo', label: 'Equipo', icon: Users, count: members.length },
   ];
   return (
     <div>
-      <header className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
+      <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
         <div className="min-w-0 sm:flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <Chip tone={role === 'coordinador' ? 'accent' : role === 'docente' ? 'violet' : 'neutral'}>{role === 'docente' && <GraduationCap className="h-3 w-3" />}{ROLES[role].short}</Chip>
-            {isPremium(p) && <Chip tone="accent"><Sparkles className="h-3 w-3" />Premium</Chip>}
+            <Chip tone={role === 'coordinador' ? 'accent' : 'neutral'}>{role === 'docente' && <GraduationCap className="h-3 w-3" />}{ROLES[role].short}</Chip>
+            {isPremium(p) && <Chip><Sparkles className="h-3 w-3 text-accent-ink" />Premium</Chip>}
             {p.status === 'archivado' && <Chip><Archive className="h-3 w-3" />Archivado</Chip>}
+            <div className="ml-auto flex items-center gap-2 sm:hidden">{team}</div>
           </div>
-          <h2 className="mt-3 text-[26px] font-semibold leading-tight tracking-[-0.03em] sm:text-[32px]" style={{ textWrap: 'balance' }}>{p.name}</h2>
+          <h1 className="mt-3 text-[22px] font-semibold leading-tight tracking-[-0.03em] sm:text-[32px]" style={{ textWrap: 'balance' }}>{p.name}</h1>
+          {p.goal && <p className="mt-1.5 line-clamp-2 max-w-[70ch] text-[14px] text-fg-2 sm:text-[15px]"><span className="sr-only">Objetivo: </span>{p.goal}</p>}
           <p className="mt-1.5 flex flex-wrap items-center gap-x-5 gap-y-1 text-[13.5px] text-fg-2">
             {p.course && <span>{p.course}</span>}
             <span className="inline-flex items-center gap-1.5"><Calendar className="h-4 w-4 text-fg-3" />{p.due_date ? `Entrega ${fmtShort(p.due_date)}, ${relDays(p.due_date)}` : 'Sin fecha de entrega'}</span>
           </p>
         </div>
-        <div className="flex items-center gap-4">
-          <div className="min-w-0 flex-1 sm:w-40 sm:flex-none" title="Cuenta como avance una tarea aprobada">
-            <p className="flex justify-between text-[12px] text-fg-2"><span>Avance aprobado</span><Mono>{prog.done}/{prog.total}</Mono></p>
-            <span className="mt-1.5 block h-1.5 overflow-hidden rounded-full bg-hov2" role="img" aria-label={`${prog.pct}% aprobado`}><span className="block h-full rounded-full bg-fg transition-[width] duration-700" style={{ width: `${prog.pct}%` }} /></span>
-          </div>
-          <button type="button" onClick={() => toTab('equipo')} aria-label="Ver equipo" className="rounded-full"><AvatarStack ring="canvas" people={membersOf(id).map((m) => ({ id: m.user_id, name: m.profile?.display_name || '?', me: m.user_id === uid }))} /></button>
-          <IconBtn label="Ajustes del proyecto" onClick={() => toTab('ajustes')} className={`h-9 w-9 ring-1 ring-inset ring-line ${tab === 'ajustes' ? 'bg-hov2 text-fg' : ''}`}><Settings className="h-4 w-4" /></IconBtn>
-        </div>
+        <div className="hidden items-center gap-3 sm:flex">{team}</div>
       </header>
-      <div className="mb-6 border-b border-line">
-        <UnderlineTabs label="Secciones del proyecto" value={tab} onChange={toTab} tabs={tabs} />
+      <div className="mb-7 hidden sm:block">
+        <StageRail stages={st.stages} selected={stageSel} onSelect={(n) => go(`/p/${id}?tiempo=${n}`)} />
       </div>
-      <div key={tab} className="anim-enter">
-        {tab === 'resumen' && <Summary p={p} role={role} onTab={toTab} />}
-        {tab === 'tareas' && <TasksTab p={p} role={role} route={route} />}
-        {tab === 'flujo' && <Flow p={p} />}
-        {tab === 'consigna' && <Brief p={p} role={role} />}
-        {tab === 'archivos' && <Resources p={p} role={role} onTab={toTab} />}
+      {/* En el celular la regla va en una sola fila; tocarla abre el detalle del tiempo en el Resumen. */}
+      <button type="button" onClick={() => go(`/p/${id}${st.current ? `?tiempo=${st.current.n}` : ''}`)} className="mb-5 flex w-full items-center justify-between gap-3 rounded-xl bg-card px-3 py-2.5 ring-1 ring-inset ring-line sm:hidden">
+        <StageRail compact stages={st.stages} />
+        <span className="text-[12px] text-fg-2">{st.current ? st.current.metric : p.status === 'archivado' ? 'Archivado' : 'Completo'}</span>
+      </button>
+      <div className="mb-6 border-b border-line">
+        <UnderlineTabs label="Secciones del proyecto" value={active} onChange={toTab} tabs={tabs} fill />
+      </div>
+      <div key={tab} id="tabpanel" role="tabpanel" aria-labelledby={active ? `tab-${active}` : undefined} className="anim-enter">
+        {tab === 'resumen' && <Summary p={p} role={role} onTab={toTab} stages={st} stage={stageSel} />}
+        {(tab === 'tareas' || tab === 'flujo') && <TasksTab p={p} role={role} route={route} map={tab === 'flujo'} />}
+        {(tab === 'consigna' || tab === 'archivos' || tab === 'material') && <MaterialTab p={p} role={role} sub={tab} />}
         {tab === 'chat' && <ChatTab p={p} role={role} />}
-        {tab === 'actividad' && <ActivityFeed p={p} />}
+        {tab === 'actividad' && <>
+          <button type="button" onClick={() => toTab('resumen')} className="mb-4 inline-flex items-center gap-1.5 text-[13px] text-fg-2 hover:text-fg"><ArrowLeft className="h-4 w-4" />Volver al resumen</button>
+          <ActivityFeed p={p} />
+        </>}
         {tab === 'equipo' && <TeamTab p={p} role={role} />}
         {tab === 'ajustes' && <SettingsTab p={p} role={role} />}
       </div>

@@ -9,7 +9,7 @@ const daysBetween = (a, b) => { const [y1, m1, d1] = a.split('-').map(Number); c
 /** Estado visual de una tarea en el Flujo. Verde = lista y aprobada; amarillo = en curso o en revisión;
  *  gris = pendiente (incluye por aceptar, sin asignar y reservada); rojo = bloqueada; rojo punteado = vencida. */
 export function flowState(t, today) {
-  if (t.status === 'lista') return { key: 'lista', label: 'Lista y aprobada' };
+  if (t.status === 'lista') return { key: 'lista', label: 'Aprobada' };
   if (t.status === 'bloqueada') return { key: 'bloqueada', label: 'Bloqueada' };
   if (t.due_date && t.due_date < today && t.status !== 'en_revision') return { key: 'vencida', label: 'Vencida' };
   if (t.status === 'en_revision') return { key: 'en_revision', label: 'En revisión' };
@@ -81,7 +81,7 @@ export function progressOf(tasks) {
  * Lo que está en riesgo, con la razón de cada alerta y una acción. Solo con datos reales.
  * level: 'riesgo' (frena el avance) o 'aviso' (conviene resolver).
  */
-export function projectAlerts({ project, tasks, members, today, resources = null }) {
+export function projectAlerts({ project, tasks, members, today, resources = null, uid = null }) {
   const out = [];
   const open = tasks.filter((t) => t.status !== 'lista');
   const add = (a) => out.push(a);
@@ -89,17 +89,18 @@ export function projectAlerts({ project, tasks, members, today, resources = null
   open.filter((t) => t.due_date && t.due_date < today && t.status !== 'en_revision').forEach((t) => add({ id: `o-${t.id}`, level: 'riesgo', title: `«${t.title}» pasó su fecha`, why: 'Una tarea vencida retrasa las que dependen de ella. Actualiza el avance o acuerda una nueva fecha.', task: t.id, action: 'Abrir tarea' }));
   const ids = new Map(tasks.map((t) => [t.id, t]));
   open.filter((t) => t.depends_on && ids.get(t.depends_on) && ids.get(t.depends_on).status !== 'lista' && t.due_date && daysBetween(today, t.due_date) <= 2 && daysBetween(today, t.due_date) >= 0)
-    .forEach((t) => add({ id: `d-${t.id}`, level: 'riesgo', title: `«${t.title}» espera a otra tarea`, why: `Depende de «${ids.get(t.depends_on).title}», que aún no está lista, y vence en ${daysBetween(today, t.due_date)} día(s).`, task: t.id, action: 'Ver dependencia' }));
+    .forEach((t) => add({ id: `d-${t.id}`, level: 'riesgo', title: `«${t.title}» espera a otra tarea`, why: `Depende de «${ids.get(t.depends_on).title}», que aún no está lista, y vence en ${daysBetween(today, t.due_date) === 1 ? '1 día' : `${daysBetween(today, t.due_date)} días`}.`, task: t.id, action: 'Ver dependencia' }));
   const unassigned = open.filter((t) => !t.assignee && !t.reserved);
-  if (unassigned.length) add({ id: 'u', level: 'aviso', title: unassigned.length === 1 ? '1 tarea sin responsable' : `${unassigned.length} tareas sin responsable`, why: 'Una tarea sin responsable suele quedar para el último día. Repártela o que alguien la tome.', tab: 'tareas', action: 'Repartir' });
-  const unaccepted = open.filter((t) => t.assignee && !t.accepted);
-  if (unaccepted.length) add({ id: 'a', level: 'aviso', title: unaccepted.length === 1 ? '1 asignación sin confirmar' : `${unaccepted.length} asignaciones sin confirmar`, why: 'Una tarea asignada no es un compromiso hasta que la persona la acepta.', tab: 'tareas', action: 'Ver tareas' });
+  if (unassigned.length) add({ id: 'u', level: 'aviso', title: unassigned.length === 1 ? '1 tarea sin responsable' : `${unassigned.length} tareas sin responsable`, why: 'Una tarea sin responsable suele quedar para el último día. Repártela o que alguien la tome.', tab: 'tareas', action: 'Repartir' , who: 'coord' });
+  // Las propias ya aparecen en «Qué te toca» con su botón; aquí solo las del resto del grupo.
+  const unaccepted = open.filter((t) => t.assignee && !t.accepted && t.assignee !== uid);
+  if (unaccepted.length) add({ id: 'a', level: 'aviso', title: unaccepted.length === 1 ? '1 tarea sin aceptar' : `${unaccepted.length} tareas sin aceptar`, why: 'Una tarea asignada no es un compromiso hasta que la persona la acepta.', tab: 'tareas', action: 'Ver tareas' });
   const noDate = open.filter((t) => !t.due_date);
   if (noDate.length && project?.due_date) add({ id: 'f', level: 'aviso', title: noDate.length === 1 ? '1 tarea sin fecha' : `${noDate.length} tareas sin fecha`, why: 'Sin fecha no hay recordatorios ni se puede saber si va a tiempo.', tab: 'tareas', action: 'Poner fechas' });
-  if (!project?.brief_text && !project?.brief_path) add({ id: 'c', level: 'aviso', title: 'Falta la consigna', why: 'Con la consigna a la vista, todos trabajan sobre lo mismo y cada tarea cita de dónde sale.', tab: 'consigna', action: 'Subir consigna' });
+  if (!project?.brief_text && !project?.brief_path) add({ id: 'c', level: 'aviso', title: 'Falta la consigna', why: 'Con la consigna a la vista, todos trabajan sobre lo mismo y cada tarea cita de dónde sale.', tab: 'consigna', action: 'Subir consigna', who: 'coord' });
   if (resources === 0 && tasks.length) add({ id: 'r', level: 'aviso', title: 'Aún no hay archivos ni enlaces', why: 'Guarden aquí el documento de trabajo para no buscarlo en el chat.', tab: 'archivos', action: 'Agregar enlace' });
   const missing = Math.max(0, (project?.expected_members || 0) - members.filter((m) => m.role !== 'docente').length);
-  if (missing) add({ id: 'm', level: 'aviso', title: missing === 1 ? 'Falta 1 integrante' : `Faltan ${missing} integrantes`, why: 'Su parte del trabajo está reservada. Se les asigna sola cuando entren con el enlace.', tab: 'equipo', action: 'Compartir enlace' });
+  if (missing) add({ id: 'm', level: 'aviso', title: missing === 1 ? 'Falta 1 integrante' : `Faltan ${missing} integrantes`, why: tasks.some((t) => t.reserved && !t.assignee) ? 'Su parte del trabajo está reservada. Se les asigna sola cuando entren con el enlace.' : 'Invítalos con un enlace para repartir entre todos.', tab: 'equipo', action: 'Invitar', who: 'coord' });
   return out;
 }
 
@@ -116,14 +117,72 @@ export function projectRoute({ project, tasks, members, checkpoints }) {
     { key: 'objetivo', label: 'Definir el objetivo', why: 'Un objetivo en una frase ayuda a decidir qué es importante y qué no.', done: !!project?.goal?.trim(), tab: 'resumen', action: 'Escribir objetivo' },
     { key: 'consigna', label: 'Subir la consigna', why: 'Es la fuente de lo que piden: todos leen lo mismo y cada tarea cita su línea.', done: !!(project?.brief_text || project?.brief_path), tab: 'consigna', action: 'Subir consigna' },
     { key: 'grupo', label: 'Reunir al grupo', why: 'El reparto es justo cuando se sabe quiénes son.', done: team.length >= Math.max(2, project?.expected_members || 0), tab: 'equipo', action: 'Invitar' },
-    { key: 'reparto', label: 'Repartir en partes iguales', why: 'Cada tarea con un responsable evita que el trabajo recaiga en una sola persona.', done: tasks.length > 0 && !open.some((t) => !t.assignee), tab: 'tareas', action: 'Repartir' },
+    { key: 'reparto', label: 'Dar un responsable a cada tarea', why: 'Cada tarea con un responsable evita que el trabajo recaiga en una sola persona.', done: tasks.length > 0 && !open.some((t) => !t.assignee && !t.reserved), tab: 'tareas', action: 'Repartir' },
     { key: 'fechas', label: 'Acordar fechas', why: 'Con fechas y checkpoints, los avisos llegan antes de que algo se atrase.', done: tasks.length > 0 && (checkpoints.length > 0 || !open.some((t) => !t.due_date)), tab: 'tareas', action: 'Poner fechas' },
-    { key: 'compromiso', label: 'Confirmar compromisos', why: 'Aceptar una tarea convierte una asignación en un compromiso.', done: tasks.length > 0 && !open.some((t) => t.assignee && !t.accepted) && !open.some((t) => !t.assignee), tab: 'tareas', action: 'Ver pendientes' },
-    { key: 'avance', label: 'Revisar el avance', why: 'Revisar las entregas entre pares hasta aprobarlas todas mejora la calidad antes de la nota.', done: tasks.length > 0 && !open.length, tab: 'flujo', action: 'Ver flujo' },
-    { key: 'cierre', label: 'Cerrar y aprender', why: 'Anotar qué funcionó y qué se trabó prepara mejor el siguiente trabajo.', done: project?.status === 'archivado' || (tasks.length > 0 && !open.length && !!project?.closing_notes?.trim()), tab: 'resumen', action: 'Escribir cierre' },
+    { key: 'compromiso', label: 'Que cada quien acepte su tarea', why: 'Aceptar una tarea convierte una asignación en un compromiso.', done: tasks.length > 0 && !open.some((t) => t.assignee && !t.accepted) && !open.some((t) => !t.assignee && !t.reserved), tab: 'tareas', action: 'Ver qué falta aceptar' },
+    { key: 'avance', label: 'Aprobar todas las entregas', why: 'Entregar, revisar entre pares y destrabar a tiempo: así llega la calidad antes de la nota.', done: tasks.length > 0 && !open.length, tab: 'tareas', action: 'Ir a las tareas' },
+    { key: 'cierre', label: 'Cerrar y aprender', why: 'Anotar qué funcionó y qué se trabó prepara mejor el siguiente trabajo.', done: project?.status === 'archivado', tab: 'resumen', action: 'Escribir cierre' },
   ];
   const next = steps.find((s) => !s.done) || null;
   return { steps, next, doneCount: steps.filter((s) => s.done).length };
+}
+
+/* ------------------------------------------------------------------ los 4 tiempos */
+
+export const STAGE_DEFS = [
+  { n: 1, key: 'armar', label: 'Armar', what: 'Objetivo, consigna y grupo completo.', steps: ['objetivo', 'consigna', 'grupo'] },
+  { n: 2, key: 'repartir', label: 'Repartir', what: 'Cada tarea con responsable, fecha y aceptada.', steps: ['reparto', 'fechas', 'compromiso'] },
+  { n: 3, key: 'avanzar', label: 'Avanzar', what: 'Hacer, entregar, revisar y destrabar hasta aprobar todo.', steps: ['avance'] },
+  { n: 4, key: 'cerrar', label: 'Cerrar', what: 'Escribir qué aprendieron y archivar.', steps: ['cierre'] },
+];
+
+/**
+ * Los 4 tiempos de un trabajo en grupo (Armar, Repartir, Avanzar, Cerrar), calculados con datos reales.
+ * state: 'done' (todos sus pasos hechos) · 'current' (el tiempo en que está el grupo) ·
+ *        'open' (un tiempo anterior al actual que quedó con pasos sin hacer) · 'todo' (todavía no empieza).
+ * El tiempo actual es el más avanzado que ya empezó y no está terminado; así un objetivo sin escribir
+ * no «devuelve» al grupo al tiempo 1 cuando ya está entregando tareas.
+ */
+export function projectStages({ project, tasks, members, checkpoints }) {
+  const route = projectRoute({ project, tasks, members, checkpoints });
+  const byKey = Object.fromEntries(route.steps.map((s) => [s.key, s]));
+  const open = tasks.filter((t) => t.status !== 'lista');
+  const archived = project?.status === 'archivado';
+  const begun = [
+    true,
+    tasks.length > 0,
+    tasks.some((t) => ['en_curso', 'en_revision', 'lista', 'bloqueada'].includes(t.status)),
+    archived || (tasks.length > 0 && !open.length),
+  ];
+  const stages = STAGE_DEFS.map((d, i) => {
+    const steps = d.steps.map((k) => byKey[k]);
+    return { ...d, steps, done: steps.every((s) => s.done), begun: begun[i], doneSteps: steps.filter((s) => s.done).length };
+  });
+  let ci = -1;
+  if (!archived) for (let i = stages.length - 1; i >= 0; i--) if (stages[i].begun && !stages[i].done) { ci = i; break; }
+  if (ci === -1 && !archived) ci = stages.findIndex((s) => !s.done);
+  const total = tasks.length;
+  const assigned = tasks.filter((t) => t.assignee).length;
+  const accepted = tasks.filter((t) => t.assignee && (t.accepted || t.status === 'lista')).length;
+  const approved = total - open.length;
+  const metric = {
+    armar: `${stages[0].doneSteps} de 3 pasos`,
+    repartir: total ? `${accepted} de ${total} aceptadas` : 'Sin tareas',
+    avanzar: total ? `${approved} de ${total} aprobadas` : 'Sin tareas',
+    cerrar: archived ? 'Archivado' : project?.closing_notes?.trim() ? 'Cierre escrito' : 'Sin cierre',
+  };
+  const out = stages.map((s, i) => {
+    const state = s.done ? 'done' : i === ci ? 'current' : (ci > -1 && i < ci) || archived ? 'open' : 'todo';
+    const nextStep = s.steps.find((x) => !x.done) || null;
+    return { ...s, state, metric: metric[s.key], nextStep };
+  });
+  return {
+    stages: out,
+    current: ci > -1 ? out[ci] : null,
+    complete: ci === -1,
+    counts: { total, assigned, accepted, approved, open: open.length },
+    route,
+  };
 }
 
 /* ------------------------------------------------------------------ enlaces */

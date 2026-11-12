@@ -1,16 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { List, Columns3, LayoutDashboard, Search, X, Check, ArrowUpRight, Crosshair, ChevronLeft, ChevronRight, FolderOpen, Calendar, Plus, Link2, CheckCheck } from 'lucide-react';
+import { List, Columns3, Search, X, Check, ArrowUpRight, FolderOpen, Plus, Link2, CheckCheck } from 'lucide-react';
 import { useApp } from '../lib/store';
 import { useLocal } from '../lib/hooks';
 import { go } from '../lib/router';
-import { myQueue, displayStatus, fmtShort, fmtDay, fmtWd, relDays, daysFrom, todayISO, fmtToday } from '../lib/format';
-import { Btn, Badge, Dot, Mono, Avatar, AvatarStack, UnderlineTabs, Empty, Spinner, SelectField } from '../components/ui';
+import { myQueue, displayStatus, fmtDay, relDays, todayISO, fmtToday } from '../lib/format';
+import { projectStages } from '../lib/center';
+import { Btn, Dot, Mono, AvatarStack, UnderlineTabs, Empty, Spinner, StageRail } from '../components/ui';
 import { ListView, BoardView, openTask } from '../components/TaskViews';
 
 const KIND = {
   accept: { label: 'Por aceptar', st: 'accept', verb: 'Aceptar', cta: 'Aceptar tarea' },
   review: { label: 'Por revisar', st: 'review', verb: 'Revisar', cta: 'Revisar entrega' },
   blocked: { label: 'Bloqueada', st: 'blocked', verb: 'Destrabar', cta: 'Ver bloqueo' },
+  unblock: { label: 'Por destrabar', st: 'blocked', verb: 'Ayudar a destrabar', cta: 'Ver bloqueo' },
   overdue: { label: 'Vencida', st: 'overdue', verb: 'Ponerse al día con', cta: 'Actualizar avance' },
 };
 
@@ -53,7 +55,7 @@ function NextStrip({ queue }) {
     <div key={it.t.id} className="anim-enter mb-6 flex flex-wrap items-center gap-x-4 gap-y-3 rounded-xl bg-card px-4 py-3 ring-1 ring-inset ring-line sm:px-5">
       <Dot st={k.st} />
       <p className="min-w-0 flex-1 text-[13.5px]">
-        <span className="text-fg-2">Tu siguiente paso: </span>
+        <span className="text-fg-2">Lo tuyo ahora: </span>
         <button type="button" onClick={() => openTask(it.t.id)} className="font-medium underline-offset-4 hover:underline">{k.verb} «{it.t.title}»</button>
         <span className="hidden text-fg-2 md:inline">, {project(it.t.project_id)?.name}</span>
       </p>
@@ -65,114 +67,93 @@ function NextStrip({ queue }) {
   );
 }
 
-function FocusCard({ queue }) {
+/* ---------------- Hoy: tus pendientes por acción + tus proyectos en sus 4 tiempos ---------------- */
+const COORD_STEPS = ['objetivo', 'consigna', 'grupo', 'reparto', 'cierre'];
+const GROUPS = [
+  { kind: 'accept', title: 'Por aceptar', hint: 'Te las asignaron. Aceptarlas confirma tu compromiso.' },
+  { kind: 'review', title: 'Por revisar', hint: 'Entregas de tu grupo que esperan tu visto bueno.' },
+  { kind: 'blocked', title: 'Bloqueadas', hint: 'Pediste ayuda: destrábalas con tu grupo.' },
+  { kind: 'unblock', title: 'Para destrabar', hint: 'Alguien de tu grupo pidió ayuda y coordinas el proyecto.' },
+  { kind: 'overdue', title: 'Vencidas', hint: 'Pasaron su fecha: actualiza el avance o acuerda otra.' },
+  { kind: 'doing', title: 'Por hacer', hint: 'Tus tareas aceptadas, la más próxima primero.' },
+];
+
+function PendingRow({ it }) {
   const { taskAction, toast, project, nameOf } = useApp();
-  const [idx, setIdx] = useState(0);
-  if (!queue.length) {
-    return (
-      <section className="flex items-center gap-4 rounded-xl bg-card p-6 ring-1 ring-inset ring-line">
-        <span className="grid h-10 w-10 place-items-center rounded-full bg-hov2"><CheckCheck className="h-5 w-5" /></span>
-        <div><h2 className="text-[15px] font-semibold">Estás al día</h2><p className="text-[13.5px] text-fg-2">No tienes nada por aceptar, revisar ni destrabar.</p></div>
-      </section>
-    );
-  }
-  const i = Math.min(idx, queue.length - 1); const it = queue[i]; const k = KIND[it.kind]; const p = project(it.t.project_id);
+  const k = KIND[it.kind]; const p = project(it.t.project_id);
+  const today = todayISO();
   return (
-    <section aria-labelledby="focus-t" className="relative overflow-hidden rounded-xl bg-card ring-1 ring-inset ring-line">
-      <div aria-hidden="true" className="pointer-events-none absolute -right-24 -top-28 h-72 w-72 rounded-full" style={{ background: 'radial-gradient(closest-side, rgb(var(--accent) / .10), transparent)' }} />
-      <div className="relative p-6 sm:p-8">
-        <div className="flex items-center justify-between">
-          <p className="flex items-center gap-2 text-[13px] text-fg-2"><Crosshair className="h-4 w-4 text-fg-3" />Tarea en foco</p>
-          <div className="flex items-center gap-1 text-fg-2">
-            <Mono className="mr-1.5">{i + 1} / {queue.length}</Mono>
-            <button type="button" aria-label="Anterior" disabled={i === 0} onClick={() => setIdx(i - 1)} className="grid h-7 w-7 place-items-center rounded-md ring-1 ring-inset ring-line hover:bg-hov hover:text-fg disabled:opacity-30"><ChevronLeft className="h-4 w-4" /></button>
-            <button type="button" aria-label="Siguiente" disabled={i >= queue.length - 1} onClick={() => setIdx(i + 1)} className="grid h-7 w-7 place-items-center rounded-md ring-1 ring-inset ring-line hover:bg-hov hover:text-fg disabled:opacity-30"><ChevronRight className="h-4 w-4" /></button>
-          </div>
-        </div>
-        <div key={it.t.id} className="anim-enter mt-6">
-          <Badge st={k.st} dot>{k.label}</Badge>
-          <h2 id="focus-t" className="mt-3 max-w-[30ch] text-[22px] font-semibold leading-tight tracking-[-0.02em] sm:text-[26px]" style={{ textWrap: 'balance' }}>{it.t.title}</h2>
-          <p className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-[13.5px] text-fg-2">
-            <span className="inline-flex items-center gap-1.5"><FolderOpen className="h-4 w-4 text-fg-3" />{p?.name}</span>
-            <span className="inline-flex items-center gap-1.5"><Calendar className="h-4 w-4 text-fg-3" />{it.t.due_date ? `${fmtShort(it.t.due_date)}, ${relDays(it.t.due_date)}` : 'Sin fecha'}</span>
-            {it.kind === 'review' && <span className="inline-flex items-center gap-1.5"><Avatar name={nameOf(it.t.assignee, p?.id)} size="sm" ring="card" />Entrega de {nameOf(it.t.assignee, p?.id)}</span>}
-          </p>
-        </div>
-        <div className="mt-7 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-5">
-          <button type="button" onClick={() => openTask(it.t.id)} className="inline-flex items-center gap-1.5 text-[13.5px] text-fg-2 hover:text-fg">Ver detalles <ArrowUpRight className="h-4 w-4" /></button>
-          {it.kind === 'accept'
-            ? <div className="flex gap-2"><Btn kind="secondary" size="lg" onClick={() => openTask(it.t.id)}>No puedo tomarla</Btn><Btn kind="primary" size="lg" onClick={async () => { if (await taskAction(it.t.id, 'aceptar')) toast('Aceptaste la tarea.'); }}><Check className="sw-bold h-4 w-4" />Aceptar tarea</Btn></div>
-            : <Btn kind="primary" size="lg" onClick={() => openTask(it.t.id)}>{k.cta}<ArrowUpRight className="h-4 w-4" /></Btn>}
-        </div>
-      </div>
-    </section>
+    <li className="flex flex-wrap items-center gap-x-3 gap-y-2 py-2.5 sm:flex-nowrap">
+      <Dot st={k ? k.st : displayStatus(it.t, today)} label />
+      <button type="button" onClick={() => openTask(it.t.id)} className="min-w-0 flex-1 text-left">
+        <span className="block truncate text-[14px] font-medium hover:underline hover:underline-offset-4">{it.t.title}</span>
+        <span className="block truncate text-[12.5px] text-fg-2">{p?.name}{it.kind === 'review' ? `, entrega de ${nameOf(it.t.assignee, p?.id)}` : ''}</span>
+      </button>
+      <span className="shrink-0 text-[12.5px] text-fg-2">{it.t.due_date ? relDays(it.t.due_date) : 'sin fecha'}</span>
+      {it.kind === 'accept'
+        ? <Btn kind="primary" size="sm" onClick={async () => { if (await taskAction(it.t.id, 'aceptar')) toast('Aceptaste la tarea.'); }}><Check className="sw-bold h-4 w-4" />Aceptar</Btn>
+        : k && <Btn size="sm" kind="secondary" onClick={() => openTask(it.t.id)}>{k.cta}</Btn>}
+    </li>
   );
 }
 
-function Summary({ tasks, projects, queue }) {
-  const { membersOf, uid } = useApp();
-  const today = todayISO();
-  const open = tasks.filter((t) => t.status !== 'lista');
-  const tiles = [
-    ['Tus acciones', queue.length, 'por aceptar, revisar o destrabar', 'accept'],
-    ['En revisión', open.filter((t) => t.status === 'en_revision').length, 'entregas esperando', 'review'],
-    ['Vencidas', open.filter((t) => displayStatus(t, today) === 'overdue').length, 'pasaron su fecha', 'overdue'],
-    ['Bloqueos', open.filter((t) => t.status === 'bloqueada').length, 'necesitan ayuda', 'blocked'],
-  ];
-  const upcoming = open.filter((t) => t.due_date && daysFrom(t.due_date) >= 0 && daysFrom(t.due_date) <= 14).sort((a, b) => a.due_date.localeCompare(b.due_date)).slice(0, 6);
+function Today({ queue, onNew }) {
+  const { tasks, projects, uid, membersOf, checkpoints } = useApp();
+  const active = projects.filter((p) => p.status === 'activo');
+  const inQueue = new Set(queue.map((it) => it.t.id));
+  const doing = tasks
+    .filter((t) => t.assignee === uid && t.accepted && !['lista', 'en_revision'].includes(t.status) && !inQueue.has(t.id) && active.some((p) => p.id === t.project_id))
+    .sort((a, b) => (a.due_date || '9999').localeCompare(b.due_date || '9999')).slice(0, 6)
+    .map((t) => ({ kind: 'doing', t }));
+  const all = [...queue, ...doing];
+  const groups = GROUPS.map((g) => ({ ...g, items: all.filter((it) => it.kind === g.kind) })).filter((g) => g.items.length);
   return (
-    <div className="anim-enter grid gap-6">
-      <FocusCard queue={queue} />
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {tiles.map(([label, n, sub, st]) => (
-          <div key={label} className="rounded-xl bg-card p-5 ring-1 ring-inset ring-line">
-            <p className="flex items-center gap-2 text-[12.5px] text-fg-2"><Dot st={st} />{label}</p>
-            <p className="mt-3 font-mono text-[28px] font-medium leading-none tabular-nums">{n}</p>
-            <p className="mt-2 text-[12px] text-fg-2">{sub}</p>
+    <div className="anim-enter grid gap-6 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] lg:items-start">
+      <section aria-labelledby="pend-t" className="rounded-2xl bg-card p-5 ring-1 ring-inset ring-line sm:p-6">
+        <div className="flex items-baseline justify-between gap-3">
+          <h2 id="pend-t" className="text-[16px] font-semibold tracking-[-0.01em]">Tus pendientes</h2>
+          {all.length > 0 && <Mono className="text-fg-2">{all.length}</Mono>}
+        </div>
+        {!groups.length ? (
+          <p className="mt-4 flex items-center gap-3 text-[14px] text-fg-2"><span className="grid h-9 w-9 place-items-center rounded-full bg-hov2"><CheckCheck className="h-4 w-4 text-fg" /></span>Estás al día: nada por aceptar, revisar ni destrabar.</p>
+        ) : groups.map((g) => (
+          <div key={g.kind} className="mt-5">
+            <h3 className="flex items-baseline gap-2 text-[13px] font-semibold">{g.title} <Mono className="text-fg-3">{g.items.length}</Mono></h3>
+            <p className="text-[12px] text-fg-2">{g.hint}</p>
+            <ul className="mt-1 divide-y divide-line">{g.items.map((it) => <PendingRow key={`${g.kind}${it.t.id}`} it={it} />)}</ul>
           </div>
         ))}
-      </div>
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
-        <section className="rounded-xl bg-card p-6 ring-1 ring-inset ring-line" aria-labelledby="sp-t">
-          <h2 id="sp-t" className="text-[14px] font-semibold">Avance por proyecto</h2>
-          <ul className="mt-4 flex flex-col">
-            {projects.map((p) => {
-              const ts = tasks.filter((t) => t.project_id === p.id);
-              const done = ts.filter((t) => t.status === 'lista').length;
-              const pct = ts.length ? Math.round((done / ts.length) * 100) : 0;
-              return (
-                <li key={p.id}>
-                  <button type="button" onClick={() => go(`/p/${p.id}`)} className="-mx-3 block w-[calc(100%+24px)] rounded-lg p-3 text-left transition-colors hover:bg-hov">
-                    <span className="flex items-center justify-between gap-3"><span className="truncate text-[13.5px] font-medium">{p.name}</span><Mono className="text-fg-2">{ts.length ? `${done}/${ts.length}` : 'sin tareas'}</Mono></span>
-                    <span className="mt-2.5 block h-1.5 overflow-hidden rounded-full bg-hov2" role="img" aria-label={`${pct}% listo`}><span className="block h-full rounded-full bg-fg transition-[width] duration-700" style={{ width: `${pct}%` }} /></span>
-                    <span className="mt-2 flex items-center justify-between gap-3 text-[12px] text-fg-2">
-                      <span>{p.due_date ? `Entrega ${fmtDay(p.due_date)}, ${relDays(p.due_date)}` : 'Sin fecha de entrega'}</span>
-                      <AvatarStack ring="card" people={membersOf(p.id).map((m) => ({ id: m.user_id, name: m.profile?.display_name || '?', me: m.user_id === uid }))} />
-                    </span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-        <section className="rounded-xl bg-card p-6 ring-1 ring-inset ring-line" aria-labelledby="up-t">
-          <h2 id="up-t" className="text-[14px] font-semibold">Próximas fechas</h2>
-          <ul className="mt-4 flex flex-col gap-1">
-            {upcoming.map((t) => (
-              <li key={t.id}>
-                <button type="button" onClick={() => openTask(t.id)} className="-mx-2 flex w-[calc(100%+16px)] items-center gap-3 rounded-lg p-2 text-left transition-colors hover:bg-hov">
-                  <span className="w-10 shrink-0 rounded-md bg-hov py-1 text-center ring-1 ring-inset ring-line">
-                    <span className="block text-[10.5px] text-fg-2">{fmtWd(t.due_date)}</span>
-                    <span className="block font-mono text-[14px] leading-5">{Number(t.due_date.slice(8))}</span>
+      </section>
+
+      <section aria-labelledby="proj-t" className="rounded-2xl bg-card p-5 ring-1 ring-inset ring-line sm:p-6">
+        <div className="flex items-center justify-between gap-3">
+          <h2 id="proj-t" className="text-[16px] font-semibold tracking-[-0.01em]">Tus proyectos</h2>
+          <Btn size="sm" onClick={onNew}><Plus className="h-4 w-4" />Nuevo</Btn>
+        </div>
+        <ul className="mt-3 flex flex-col">
+          {active.map((p) => {
+            const ts = tasks.filter((t) => t.project_id === p.id);
+            const st = projectStages({ project: p, tasks: ts, members: membersOf(p.id), checkpoints: checkpoints.filter((c) => c.project_id === p.id) });
+            const nx = st.current?.nextStep;
+            return (
+              <li key={p.id} className="border-t border-line first:border-t-0">
+                <button type="button" onClick={() => go(`/p/${p.id}`)} className="-mx-3 block w-[calc(100%+24px)] rounded-xl p-3 text-left transition-colors hover:bg-hov">
+                  <span className="flex items-center justify-between gap-3">
+                    <span className="truncate text-[14px] font-medium">{p.name}</span>
+                    <AvatarStack ring="card" people={membersOf(p.id).map((m) => ({ id: m.user_id, name: m.profile?.display_name || '?', me: m.user_id === uid }))} />
                   </span>
-                  <span className="min-w-0 flex-1"><span className="flex items-center gap-2"><Dot st={displayStatus(t)} /><span className="truncate text-[13px] font-medium">{t.title}</span></span></span>
+                  <span className="mt-2.5 flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5">
+                    <StageRail compact stages={st.stages} />
+                    <span className="text-[12px] text-fg-2">{p.due_date ? `Entrega ${fmtDay(p.due_date)}, ${relDays(p.due_date)}` : 'Sin fecha de entrega'}</span>
+                  </span>
+                  {nx && <span className="mt-1.5 block truncate text-[12.5px] text-fg-2">{p.myRole !== 'coordinador' && COORD_STEPS.includes(nx.key) ? 'Le toca a la coordinación: ' : 'Siguiente paso: '}<span className="text-fg">{nx.label}</span></span>}
                 </button>
               </li>
-            ))}
-            {!upcoming.length && <li className="text-[13px] text-fg-2">Sin fechas en las próximas dos semanas.</li>}
-          </ul>
-        </section>
-      </div>
+            );
+          })}
+          {!active.length && <li className="text-[13.5px] text-fg-2">No tienes proyectos activos.</li>}
+        </ul>
+      </section>
     </div>
   );
 }
@@ -195,10 +176,10 @@ function ProjectFilter({ projects, selected, onChange }) {
   return (
     <div ref={ref} className="relative min-w-0 flex-1 sm:w-60 sm:flex-none">
       <button type="button" id="dash-proj" onClick={() => setOpen(!open)} aria-haspopup="listbox" aria-expanded={open}
-              className={`field flex h-9 items-center gap-2 text-left text-[13px] ${selected.length ? 'ring-accent/50' : ''}`}>
+              className={`field flex h-9 items-center gap-2 text-left text-[13px] ${selected.length ? 'pr-9 ring-accent/50' : ''}`}>
         <FolderOpen className="h-4 w-4 shrink-0 text-fg-3" /><span className="min-w-0 flex-1 truncate">{label}</span>
-        {selected.length > 0 && <span role="button" tabIndex={0} aria-label="Quitar filtro de proyectos" onClick={(e) => { e.stopPropagation(); onChange([]); }} onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); onChange([]); } }} className="grid h-5 w-5 place-items-center rounded text-fg-3 hover:text-fg"><X className="h-3.5 w-3.5" /></span>}
       </button>
+      {selected.length > 0 && <button type="button" aria-label="Quitar filtro de proyectos" onClick={() => onChange([])} className="absolute right-1.5 top-1.5 grid h-6 w-6 place-items-center rounded text-fg-3 hover:text-fg"><X className="h-3.5 w-3.5" /></button>}
       {open && (
         <div className="anim-enter absolute right-0 z-30 mt-1.5 w-[min(320px,calc(100vw-32px))] rounded-xl bg-card p-2 shadow-pop ring-1 ring-inset ring-line">
           {projects.length > 5 && <input autoFocus type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar proyecto" aria-label="Buscar proyecto" className="field mb-2 h-8 text-[13px]" />}
@@ -249,7 +230,7 @@ export default function Dashboard({ scope, onNew, route }) {
           <p className="text-[13px] text-fg-2">{fmtToday()}</p>
           <h2 className="mt-1 text-[26px] font-semibold tracking-[-0.03em] sm:text-[30px]">{scope === 'mine' ? 'Mis tareas' : `Hola, ${profile.display_name.split(' ')[0]}`}</h2>
         </div>
-        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+        {scope === 'mine' && <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
           {active.length > 1 && <ProjectFilter projects={active} selected={sel} onChange={setSel} />}
           <label className="relative flex min-w-0 flex-1 items-center sm:w-56 sm:flex-none">
             <span className="sr-only">Buscar tareas</span>
@@ -257,21 +238,20 @@ export default function Dashboard({ scope, onNew, route }) {
             <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar tarea" className="field h-9 pl-9 text-[13px]" />
             {query && <button type="button" onClick={() => setQuery('')} aria-label="Limpiar" className="absolute right-2 grid h-6 w-6 place-items-center rounded text-fg-3 hover:text-fg"><X className="h-3.5 w-3.5" /></button>}
           </label>
+        </div>}
+      </div>
+
+      {scope !== 'mine' ? <Today queue={queue} onNew={onNew} /> : <>
+        <div className="mb-6 border-b border-line">
+          <UnderlineTabs label="Vistas" value={tab === 'tablero' ? 'tablero' : 'lista'} onChange={setTab} tabs={[
+            { id: 'lista', label: 'Lista', icon: List },
+            { id: 'tablero', label: 'Tablero', icon: Columns3 },
+          ]} />
         </div>
-      </div>
-
-      <div className="mb-6 border-b border-line">
-        <UnderlineTabs label="Vistas" value={tab} onChange={setTab} tabs={[
-          { id: 'lista', label: 'Lista', icon: List },
-          { id: 'tablero', label: 'Tablero', icon: Columns3 },
-          { id: 'resumen', label: 'Resumen', icon: LayoutDashboard },
-        ]} />
-      </div>
-
-      {tab !== 'resumen' && <NextStrip queue={pf ? queue.filter((it) => pf.has(it.t.project_id)) : queue} />}
-      {tab === 'lista' && <ListView tasks={scoped} showProject={!pf || pf.size > 1} empty={<Empty icon={CheckCheck} title={q ? `Ninguna tarea coincide con «${query.trim()}»` : pf ? 'No hay tareas en los proyectos elegidos' : scope === 'mine' ? 'No tienes tareas asignadas' : 'Todavía no hay tareas'} text={pf || q ? 'Prueba con otros proyectos o limpia los filtros.' : scope === 'mine' ? 'Cuando te asignen una tarea o tomes una, aparecerá aquí.' : 'Abre un proyecto para añadir tareas o repartirlas.'}>{(pf || q) && <Btn onClick={() => { setQuery(''); setSel([]); }}><X className="h-4 w-4" />Limpiar filtros</Btn>}</Empty>} />}
-      {tab === 'tablero' && <BoardView tasks={scoped} showProject={!pf || pf.size > 1} />}
-      {tab === 'resumen' && <Summary tasks={scoped} projects={pf ? active.filter((p) => pf.has(p.id)) : active} queue={queue} />}
+        <NextStrip queue={pf ? queue.filter((it) => pf.has(it.t.project_id)) : queue} />
+        {tab !== 'tablero' ? <ListView tasks={scoped} showProject={!pf || pf.size > 1} empty={<Empty icon={CheckCheck} title={q ? `Ninguna tarea coincide con «${query.trim()}»` : pf ? 'No hay tareas en los proyectos elegidos' : 'No tienes tareas asignadas'} text={pf || q ? 'Prueba con otros proyectos o limpia los filtros.' : 'Cuando te asignen una tarea o tomes una, aparecerá aquí.'}>{(pf || q) && <Btn onClick={() => { setQuery(''); setSel([]); }}><X className="h-4 w-4" />Limpiar filtros</Btn>}</Empty>} />
+          : <BoardView tasks={scoped} showProject={!pf || pf.size > 1} />}
+      </>}
     </div>
   );
 }

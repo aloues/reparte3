@@ -67,7 +67,7 @@ export default function AdminPage() {
                   <td className="px-3 py-3 text-fg-2">{ago(r.created_at)}</td>
                   <td className="px-5 py-3 text-right">
                     {r.plan === 'premium'
-                      ? <Btn size="xs" kind="secondary" onClick={() => setPlan(r, 'gratis')}><Sparkles className="h-3 w-3 text-accent" />Premium</Btn>
+                      ? <Btn size="xs" kind="secondary" onClick={() => setPlan(r, 'gratis')}><Sparkles className="h-3 w-3 text-accent-ink" />Premium</Btn>
                       : <Btn size="xs" kind="ghost" onClick={() => setPlan(r, 'premium')}>Gratis</Btn>}
                   </td>
                 </tr>

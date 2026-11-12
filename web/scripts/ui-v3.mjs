@@ -73,7 +73,7 @@ console.log('Datos de prueba listos.');
 
 /* ------------------------------------------------------------------ navegador */
 const browser = await puppeteer.launch({ executablePath: CHROME, headless: 'new', args: ['--no-sandbox', '--lang=es-PE'] });
-const shot = async (page, name, full = false) => { await sleep(700); await page.screenshot({ path: path.join(OUT, `app_${name}.png`), fullPage: full }); console.log(`  captura app_${name}`); };
+const shot = async (page, name, full = false) => { await page.bringToFront(); await sleep(900); await page.screenshot({ path: path.join(OUT, `app_${name}.png`), fullPage: full }); console.log(`  captura app_${name}`); };
 async function login(vp, theme = 'light') {
   const ctx = await browser.createIncognitoBrowserContext();
   const page = await ctx.newPage();
@@ -94,9 +94,9 @@ try {
   console.log('\nComputadora');
   const P = await login({ width: 1440, height: 900 });
   await goTab(P, '');
-  ok(await P.evaluate(() => /Siguiente paso del proyecto|Qué está en riesgo/.test(document.body.innerText)), 'Resumen: objetivo, avance, siguiente paso y riesgos');
+  ok(await P.evaluate(() => /Qué te toca/.test(document.body.innerText) && /Qué está en riesgo/.test(document.body.innerText)), 'Resumen: objetivo, avance, siguiente paso y riesgos');
   ok(await P.evaluate(() => document.body.innerText.includes('Faltan los datos de la encuesta') || document.body.innerText.includes('está bloqueada')), 'Resumen explica el bloqueo con su motivo');
-  await shot(P, 'resumen', true);
+  await sleep(1500); await shot(P, 'resumen', true);
   await goTab(P, 'tareas'); await shot(P, 'tareas');
   await goTab(P, 'flujo');
   ok(await P.evaluate(() => document.querySelectorAll('.flow-node').length >= 6 && document.querySelectorAll('svg path[marker-end]').length === 2), 'Flujo: nodos reales y 2 flechas (las 2 dependencias definidas)');
@@ -122,6 +122,9 @@ try {
   ok(await drawerOpen(P), 'Chat: tocar #n abre esa tarea');
   await shot(P, 'chat');
   await goTab(P, 'actividad'); await shot(P, 'actividad');
+  await P.goto(`${BASE}#/`, { waitUntil: 'networkidle0' }); await sleep(500);
+  ok(await P.evaluate(() => document.body.innerText.includes('Tus pendientes') && document.body.innerText.includes('Tus proyectos')), 'Hoy: pendientes por acción y proyectos con sus 4 tiempos');
+  await shot(P, 'hoy', true);
   console.log('\nFiltro por proyecto en Mis tareas');
   await P.goto(`${BASE}#/mis-tareas`, { waitUntil: 'networkidle0' });
   await P.click('#dash-proj');
@@ -150,7 +153,8 @@ try {
 
   console.log('\nCelular y tablet');
   const M = await login({ width: 390, height: 844, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
-  for (const t of ['', 'flujo', 'chat', 'archivos']) {
+  await M.goto(`${BASE}#/`, { waitUntil: 'networkidle0' }); await sleep(400); await shot(M, 'movil_hoy');
+  for (const t of ['', 'tareas', 'flujo', 'chat', 'archivos']) {
     await goTab(M, t);
     const over = await M.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
     ok(!over, `celular, ${t || 'resumen'}: sin desplazamiento horizontal`);

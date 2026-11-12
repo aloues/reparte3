@@ -85,10 +85,10 @@ export default function Brief({ p, role }) {
                 const n = i + 1; const hit = byLine[n]; const maybe = uncovered.find((x) => x.line === n);
                 return (
                   <li key={i} className={`grid grid-cols-[44px_minmax(0,1fr)] items-start gap-3 px-3 ${hit ? 'bg-accent/[.07]' : ''}`}>
-                    <span className={`select-none pt-px text-right ${hit ? 'font-semibold text-accent' : 'text-fg-3'}`}>{n}</span>
+                    <span className={`select-none pt-px text-right ${hit ? 'font-semibold text-accent-ink' : 'text-fg-3'}`}>{n}</span>
                     <span className="min-w-0 whitespace-pre-wrap break-words font-sans text-[14px] leading-6">
                       {l || ' '}
-                      {hit && hit.map((t) => <button key={t.id} type="button" onClick={() => openTask(t.id)} className="ml-2 inline-flex items-center gap-1 rounded bg-accent/10 px-1.5 align-middle text-[11.5px] font-medium text-accent hover:bg-accent/20">#{t.seq}</button>)}
+                      {hit && hit.map((t) => <button key={t.id} type="button" onClick={() => openTask(t.id)} className="ml-2 inline-flex items-center gap-1 rounded bg-accent/10 px-1.5 align-middle text-[11.5px] font-medium text-accent-ink hover:bg-accent/20">#{t.seq}</button>)}
                       {!hit && maybe && <span className="ml-2 inline-flex items-center rounded px-1.5 align-middle text-[11px] text-amber ring-1 ring-inset ring-amber/30">sin tarea</span>}
                     </span>
                   </li>
@@ -108,7 +108,7 @@ export default function Brief({ p, role }) {
               {linked.map((t) => (
                 <li key={t.id}><button type="button" onClick={() => openTask(t.id)} className="flex w-full items-start gap-3 rounded-lg p-2 text-left hover:bg-hov">
                   <Mono className="mt-0.5 w-[54px] shrink-0 whitespace-nowrap text-fg-3">línea {t.source_line}</Mono>
-                  <span className="min-w-0 flex-1"><span className="block text-[13.5px] leading-5">{t.title}</span>{t.kind && <span className={`text-[11.5px] ${t.kind === 'sugerencia' ? 'text-violet' : 'text-fg-2'}`}>{KINDS[t.kind]}</span>}</span>
+                  <span className="min-w-0 flex-1"><span className="block text-[13.5px] leading-5">{t.title}</span>{t.kind && <span className={`text-[11.5px] ${t.kind === 'sugerencia' ? 'text-accent-ink' : 'text-fg-2'}`}>{KINDS[t.kind]}</span>}</span>
                 </button></li>
               ))}
             </ul>
@@ -123,7 +123,7 @@ export default function Brief({ p, role }) {
                 <li key={x.line} className="flex items-start gap-2 text-[13px]">
                   <Mono className="mt-0.5 w-[54px] shrink-0 whitespace-nowrap text-fg-3">línea {x.line}</Mono>
                   <span className="min-w-0 flex-1 leading-5">{x.title}</span>
-                  {coord && <button type="button" onClick={() => createFrom(x)} className="inline-flex shrink-0 items-center gap-1 rounded-md px-2 py-0.5 text-[12px] font-medium text-accent ring-1 ring-inset ring-accent/30 hover:bg-accent/10"><Plus className="h-3.5 w-3.5" />Tarea</button>}
+                  {coord && <button type="button" onClick={() => createFrom(x)} className="inline-flex shrink-0 items-center gap-1 rounded-md px-2 py-0.5 text-[12px] font-medium text-accent-ink ring-1 ring-inset ring-accent/30 hover:bg-accent/10"><Plus className="h-3.5 w-3.5" />Tarea</button>}
                 </li>
               ))}
             </ul>

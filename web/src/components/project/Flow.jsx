@@ -9,7 +9,7 @@ import { openTask } from '../TaskViews';
 
 const W = 232; const H = 86; const GX = 72; const GY = 14; const TOP = 44;
 const LEGEND = [
-  ['lista', 'Lista y aprobada'], ['en_curso', 'En curso o en revisión'], ['pendiente', 'Pendiente'], ['bloqueada', 'Bloqueada'], ['vencida', 'Vencida'],
+  ['lista', 'Aprobada'], ['en_curso', 'En curso o en revisión'], ['pendiente', 'Pendiente'], ['bloqueada', 'Bloqueada'], ['vencida', 'Vencida'],
 ];
 const MODE = { fases: 'por fases', checkpoints: 'por checkpoints', secuencia: 'en orden (aún sin fases)' };
 
@@ -41,7 +41,7 @@ export default function Flow({ p }) {
   const [scale, setScale] = useState(1);
   const [hot, setHot] = useState(null);
   const box = useRef(null);
-  const asList = small || view === 'lista';
+  const asList = small;
 
   const pos = {};
   L.columns.forEach((c, ci) => c.tasks.forEach((t, ti) => { pos[t.id] = { x: ci * (W + GX), y: TOP + ti * (H + GY), col: ci }; }));
@@ -70,8 +70,8 @@ export default function Flow({ p }) {
   return (
     <div className="grid grid-cols-1 gap-4">
       {/* Lectura rápida del estado, con reglas visibles */}
-      <section className="grid grid-cols-1 gap-4 rounded-2xl bg-card p-5 ring-1 ring-inset ring-line sm:grid-cols-4">
-        <div><p className="text-[12.5px] text-fg-2">Fase actual</p><p className="mt-1 text-[15px] font-semibold">{L.current ? L.current.label : 'Todo listo'}</p></div>
+      <section className="grid grid-cols-2 gap-x-4 gap-y-5 rounded-2xl bg-card p-5 ring-1 ring-inset ring-line sm:grid-cols-4">
+        <div><p className="text-[12.5px] text-fg-2">Fase en curso</p><p className="mt-1 text-[15px] font-semibold">{L.current ? L.current.label : 'Todo listo'}</p></div>
         <div><p className="text-[12.5px] text-fg-2">Próxima entrega</p><p className="mt-1 text-[15px] font-semibold">{nextCp ? nextCp.title : p.due_date ? 'Entrega final' : 'Sin fecha'}</p><p className="text-[12px] text-fg-2">{nextCp ? `${fmtShort(nextCp.due_date)}, ${relDays(nextCp.due_date)}` : p.due_date ? `${fmtShort(p.due_date)}, ${relDays(p.due_date)}` : ''}</p></div>
         <div><p className="text-[12.5px] text-fg-2">Detenidas</p><p className="mt-1 text-[15px] font-semibold">{blocked === 1 ? '1 bloqueada' : `${blocked} bloqueadas`}, {L.waiting.length === 1 ? '1 espera a otra' : `${L.waiting.length} esperan a otra`}</p></div>
         <div><p className="text-[12.5px] text-fg-2">Avance</p><p className="mt-1 text-[15px] font-semibold">{prog.done} de {prog.total} aprobadas</p></div>
@@ -82,7 +82,7 @@ export default function Flow({ p }) {
           {LEGEND.map(([k, lb]) => <li key={k} className="flex items-center gap-2"><span className={`flow-swatch flow-${k}`} aria-hidden="true" />{lb}</li>)}
         </ul>
         <div className="flex items-center gap-2">
-          {!small && <Segmented label="Vista del flujo" value={view} onChange={setView} options={[{ id: 'mapa', label: 'Mapa', icon: Network }, { id: 'lista', label: 'Lista', icon: List }]} />}
+
           {!asList && <div className="flex items-center rounded-lg ring-1 ring-inset ring-line">
             <button type="button" aria-label="Alejar" onClick={() => setScale((s) => Math.max(0.5, +(s - 0.1).toFixed(2)))} className="grid grid-cols-1 h-8 w-8 place-items-center text-fg-2 hover:text-fg"><ZoomOut className="h-4 w-4" /></button>
             <button type="button" onClick={fit} className="flex h-8 items-center gap-1.5 border-x border-line px-2 text-[12.5px] text-fg-2 hover:text-fg"><Maximize2 className="h-3.5 w-3.5" />Ajustar</button>
@@ -95,7 +95,7 @@ export default function Flow({ p }) {
         <div className="grid grid-cols-1 gap-4">
           {L.columns.map((c) => (
             <section key={c.key} aria-label={c.label}>
-              <h3 className="mb-2 flex items-center gap-2 text-[13px] font-semibold">{c.label}{c.due && <span className="font-normal text-fg-2">{fmtShort(c.due)}</span>}{L.current?.key === c.key && <span className="rounded bg-accent/10 px-1.5 py-0.5 text-[11.5px] font-medium text-accent">fase actual</span>}</h3>
+              <h3 className="mb-2 flex items-center gap-2 text-[13px] font-semibold">{c.label}{c.due && <span className="font-normal text-fg-2">{fmtShort(c.due)}</span>}{L.current?.key === c.key && <span className="rounded bg-accent/10 px-1.5 py-0.5 text-[11.5px] font-medium text-accent-ink">fase actual</span>}</h3>
               <ul className="grid grid-cols-1 gap-2">
                 {c.tasks.map((t) => {
                   const st = L.states[t.id]; const wait = L.waiting.includes(t.id) ? byId[t.depends_on] : null;
@@ -118,7 +118,7 @@ export default function Flow({ p }) {
               {L.columns.map((c, ci) => (
                 <div key={c.key} className="absolute flex items-center gap-2 text-[12.5px] font-semibold" style={{ left: ci * (W + GX), top: 0, width: W }}>
                   <span className="truncate">{c.label}</span>{c.due && <span className="shrink-0 font-normal text-fg-2">{fmtDay(c.due)}</span>}
-                  {L.current?.key === c.key && <span className="shrink-0 rounded bg-accent/10 px-1.5 py-0.5 text-[11px] font-medium text-accent">actual</span>}
+                  {L.current?.key === c.key && <span className="shrink-0 rounded bg-accent/10 px-1.5 py-0.5 text-[11px] font-medium text-accent-ink">actual</span>}
                 </div>
               ))}
               <svg className="pointer-events-none absolute left-0 top-0 overflow-visible" width={width} height={height} aria-hidden="true">

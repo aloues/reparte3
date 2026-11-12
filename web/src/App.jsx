@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  Home, CircleUser, FolderOpen, Sparkles, Shield, Plus, PanelLeftClose, PanelLeftOpen, X, Menu, Bell, Sun, Moon,
+  Sunrise, CircleUser, FolderOpen, Sparkles, Shield, Plus, PanelLeftClose, PanelLeftOpen, X, Menu, Bell, Sun, Moon,
   ChevronsUpDown, Undo2, CheckCheck, Info, AlertTriangle, WifiOff,
 } from 'lucide-react';
 import { configured } from './lib/supabase';
@@ -118,7 +118,7 @@ function Sidebar({ route, open, onClose, collapsed, setCollapsed, theme, setThem
           </button>
 
           <nav aria-label="Principal" className={`flex flex-col gap-0.5 ${c ? 'items-center' : ''}`}>
-            <SideItem icon={Home} label="Inicio" active={at === 'inicio'} collapsed={c} onClick={() => nav('/')} />
+            <SideItem icon={Sunrise} label="Hoy" active={at === 'inicio'} collapsed={c} onClick={() => nav('/')} />
             <SideItem icon={CircleUser} label="Mis tareas" active={at === 'mis-tareas'} collapsed={c} count={queueCount} onClick={() => nav('/mis-tareas')} />
             <SideItem icon={FolderOpen} label="Proyectos" active={at === 'proyectos'} collapsed={c} onClick={() => nav('/proyectos')} />
             <SideItem icon={Sparkles} label="Premium" active={at === 'premium'} collapsed={c} onClick={() => nav('/premium')} />
@@ -199,7 +199,7 @@ function Toasts() {
 }
 
 /* ================= armazón ================= */
-const TITLES = { inicio: 'Inicio', 'mis-tareas': 'Mis tareas', proyectos: 'Proyectos', premium: 'Premium', ajustes: 'Ajustes', admin: 'Administración', unirse: 'Unirse a un grupo' };
+const TITLES = { inicio: 'Hoy', 'mis-tareas': 'Mis tareas', proyectos: 'Proyectos', premium: 'Premium', ajustes: 'Ajustes', admin: 'Administración', unirse: 'Unirse a un grupo' };
 
 function Shell({ route, theme, setTheme }) {
   const { tasks, projects, uid, notifs, online, project } = useApp();
@@ -245,7 +245,7 @@ function Shell({ route, theme, setTheme }) {
   if (at === 'inicio') page = <Dashboard scope="all" route={route} onNew={() => setWizard(true)} />;
   else if (at === 'mis-tareas') page = <Dashboard scope="mine" route={route} onNew={() => setWizard(true)} />;
   else if (at === 'proyectos') page = <ProjectsPage onNew={() => setWizard(true)} />;
-  else if (at === 'p') page = <ProjectPage id={route.parts[1]} tab={route.parts[2] || 'resumen'} route={route} />;
+  else if (at === 'p') page = <ProjectPage key={route.parts[1]} id={route.parts[1]} tab={route.parts[2] || 'resumen'} route={route} />;
   else if (at === 'unirse') page = <JoinPage code={route.parts[1]} />;
   else if (at === 'premium') page = <PremiumPage />;
   else if (at === 'ajustes') page = <SettingsPage theme={theme} setTheme={setTheme} />;
@@ -258,13 +258,13 @@ function Shell({ route, theme, setTheme }) {
       <Sidebar route={route} open={menu} onClose={() => setMenu(false)} collapsed={collapsed && isLg} setCollapsed={setCollapsed}
                theme={theme} setTheme={setTheme} onNew={() => setWizard(true)} queueCount={queue.length} />
       <div className="min-w-0 flex-1 overflow-x-clip lg:py-2 lg:pr-2">
-        <div className="r3-ruled min-h-[100dvh] lg:min-h-[calc(100dvh-16px)] lg:rounded-xl lg:shadow-xs lg:ring-1 lg:ring-inset lg:ring-line">
+        <div className="r3-ruled r3-margin min-h-[100dvh] lg:min-h-[calc(100dvh-16px)] lg:rounded-xl lg:shadow-xs lg:ring-1 lg:ring-inset lg:ring-line">
           <header className="sticky top-[env(safe-area-inset-top,0px)] z-20 border-b border-line bg-canvas/85 backdrop-blur-md lg:rounded-t-xl">
             <div className="gutter mx-auto flex h-14 max-w-[1280px] items-center gap-2">
               <IconBtn label="Abrir menú" onClick={() => setMenu(true)} className="-ml-1.5 h-9 w-9 lg:hidden"><Menu className="h-5 w-5" /></IconBtn>
               <nav aria-label="Ruta" className="flex min-w-0 items-center gap-1.5 text-[13.5px]">
                 {p && <><button type="button" onClick={() => go('/proyectos')} className="hidden text-fg-2 hover:text-fg sm:inline">Proyectos</button><span className="hidden text-fg-3 sm:inline">/</span></>}
-                <h1 className="truncate font-medium">{title}</h1>
+                {p ? <span className="truncate font-medium" aria-hidden="true">{title}</span> : <h1 className="truncate font-medium">{title}</h1>}
               </nav>
               <div className="ml-auto flex items-center gap-1.5">
                 {!online && <span className="hidden items-center gap-1.5 rounded-md bg-orange/10 px-2 py-1 text-[12px] font-medium text-orange sm:inline-flex"><WifiOff className="h-3.5 w-3.5" />Sin conexión</span>}

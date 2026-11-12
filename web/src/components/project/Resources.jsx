@@ -103,7 +103,7 @@ export default function Resources({ p, role, onTab }) {
                   <div className="mt-4 flex flex-wrap items-center gap-2 text-[12px] text-fg-2">
                     {t && <button type="button" onClick={() => openTask(t.id)} className="rounded-md bg-hov px-1.5 py-0.5 text-fg hover:bg-hov2">#{t.seq} {t.title.length > 26 ? `${t.title.slice(0, 26)}…` : t.title}</button>}
                     <span className="inline-flex items-center gap-1">{l.source === 'chat' && <MessageCircle className="h-3 w-3" />}{l.source === 'chat' ? 'Del chat' : l.source === 'drive' ? 'De Drive' : 'Agregado'} por {l.added_by === uid ? 'ti' : nameOf(l.added_by, p.id)}, {ago(l.created_at)}</span>
-                    <a href={l.url} target="_blank" rel="noopener noreferrer" className="ml-auto inline-flex items-center gap-1 font-medium text-accent hover:underline">Abrir<ExternalLink className="h-3.5 w-3.5" /></a>
+                    <a href={l.url} target="_blank" rel="noopener noreferrer" className="ml-auto inline-flex items-center gap-1 font-medium text-accent-ink hover:underline">Abrir<ExternalLink className="h-3.5 w-3.5" /></a>
                   </div>
                 </li>
               );

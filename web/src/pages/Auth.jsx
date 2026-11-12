@@ -102,7 +102,7 @@ export function AuthPage({ theme, setTheme, initialMode = 'login' }) {
         <div className="mx-auto my-auto w-full max-w-[400px] py-10">
           {sent ? (
             <div className="anim-enter text-center">
-              <span className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-accent/10 text-accent"><Mail className="h-5 w-5" /></span>
+              <span className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-accent/10 text-accent-ink"><Mail className="h-5 w-5" /></span>
               <h1 className="mt-5 text-[22px] font-semibold tracking-[-0.02em]">Revisa tu correo</h1>
               <p className="mt-2 text-[14px] leading-relaxed text-fg-2">{sent === 'confirm' ? `Te enviamos un enlace a ${f.email} para confirmar tu cuenta. Ábrelo en este mismo dispositivo.` : `Si hay una cuenta con ${f.email}, te llegará un enlace para crear una nueva contraseña.`}</p>
               <Btn className="mt-6" onClick={() => { setSent(''); setMode('login'); }}><ArrowLeft className="h-4 w-4" />Volver a iniciar sesión</Btn>

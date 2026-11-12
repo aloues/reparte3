@@ -19,9 +19,9 @@ function Body({ body, bySeq, q }) {
     return i < 0 ? s : <>{s.slice(0, i)}<mark className="rounded bg-accent/20 px-0.5 text-fg">{s.slice(i, i + q.length)}</mark>{s.slice(i + q.length)}</>;
   };
   return chatSegments(body, bySeq).map((s, i) => (s.type === 'url'
-    ? <a key={i} href={s.value} target="_blank" rel="noopener noreferrer nofollow" className="break-all text-accent underline underline-offset-2">{s.value}</a>
+    ? <a key={i} href={s.value} target="_blank" rel="noopener noreferrer nofollow" className="break-all text-accent-ink underline underline-offset-2">{s.value}</a>
     : s.type === 'task'
-      ? <button key={i} type="button" onClick={() => openTask(s.task.id)} title={s.task.title} className="rounded bg-accent/10 px-1 font-medium text-accent hover:bg-accent/20">{s.value}</button>
+      ? <button key={i} type="button" onClick={() => openTask(s.task.id)} title={s.task.title} className="rounded bg-accent/10 px-1 font-medium text-accent-ink hover:bg-accent/20">{s.value}</button>
       : <Fragment key={i}>{mark(s.value)}</Fragment>));
 }
 
@@ -99,10 +99,10 @@ export function Messages({ projectId, taskId, readOnly, premium, compact, emptyT
                   <li id={`m-${m.id}`} onClick={q ? () => jump(m.id) : undefined} className={`group flex gap-3 ${sameRun && !q ? 'mt-0.5' : 'mt-4'} ${m._fresh ? 'anim-enter' : ''} ${m.pinned ? 'rounded-lg bg-accent/[.04] ring-1 ring-inset ring-accent/15' : ''} ${q ? 'cursor-pointer rounded-lg hover:bg-hov' : ''}`}>
                     <span className="w-7 shrink-0">{(!sameRun || q) && <Avatar name={nameOf(m.author, projectId)} me={mine} size="md" />}</span>
                     <div className="min-w-0 flex-1">
-                      {(!sameRun || q || m.pinned) && <p className="flex items-center gap-1.5 text-[12.5px]"><span className="font-medium text-fg">{mine ? 'Tú' : nameOf(m.author, projectId)}</span> <span className="text-fg-3">{ago(m.created_at)}</span>{m.pinned && <span className="inline-flex items-center gap-1 text-[11.5px] font-medium text-accent"><Pin className="h-3 w-3" />Fijado</span>}</p>}
+                      {(!sameRun || q || m.pinned) && <p className="flex items-center gap-1.5 text-[12.5px]"><span className="font-medium text-fg">{mine ? 'Tú' : nameOf(m.author, projectId)}</span> <span className="text-fg-3">{ago(m.created_at)}</span>{m.pinned && <span className="inline-flex items-center gap-1 text-[11.5px] font-medium text-accent-ink"><Pin className="h-3 w-3" />Fijado</span>}</p>}
                       <div className="flex items-start gap-1">
                         <p className="min-w-0 flex-1 whitespace-pre-wrap break-words text-[14px] leading-relaxed text-fg"><Body body={m.body} bySeq={bySeq} q={q} /></p>
-                        {coord && !taskId && !readOnly && <IconBtn label={m.pinned ? 'Desfijar mensaje' : 'Fijar mensaje'} onClick={async (e) => { e.stopPropagation(); try { await pin(m.id, !m.pinned); } catch (err) { toast(errMsg(err), { icon: 'error' }); } }} className={`h-7 w-7 hover:text-accent group-hover:opacity-100 focus:opacity-100 ${m.pinned ? 'text-accent' : 'text-fg-3 opacity-0'}`}>{m.pinned ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}</IconBtn>}
+                        {coord && !taskId && !readOnly && <IconBtn label={m.pinned ? 'Desfijar mensaje' : 'Fijar mensaje'} onClick={async (e) => { e.stopPropagation(); try { await pin(m.id, !m.pinned); } catch (err) { toast(errMsg(err), { icon: 'error' }); } }} className={`h-7 w-7 hover:text-accent-ink group-hover:opacity-100 focus:opacity-100 ${m.pinned ? 'text-accent-ink' : 'text-fg-3 opacity-0'}`}>{m.pinned ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}</IconBtn>}
                         {mine && <IconBtn label="Borrar mensaje" onClick={async (e) => { e.stopPropagation(); try { await remove(m.id); } catch (err) { toast(errMsg(err), { icon: 'error' }); } }} className="h-7 w-7 text-fg-3 opacity-0 hover:text-red group-hover:opacity-100 focus:opacity-100"><Trash2 className="h-3.5 w-3.5" /></IconBtn>}
                       </div>
                     </div>
@@ -119,9 +119,9 @@ export function Messages({ projectId, taskId, readOnly, premium, compact, emptyT
         <p className="mt-3 flex items-center gap-2 rounded-lg bg-hov px-3 py-2.5 text-[12.5px] text-fg-2"><Lock className="h-3.5 w-3.5" />Como docente puedes leer, pero no escribir.</p>
       ) : !premium ? (
         <div className="mt-3 flex flex-wrap items-center gap-3 rounded-xl bg-accent/[.06] p-3 ring-1 ring-inset ring-accent/20">
-          <Sparkles className="h-4 w-4 text-accent" />
+          <Sparkles className="h-4 w-4 text-accent-ink" />
           <p className="min-w-0 flex-1 text-[13px]">El chat es parte de Premium. Este grupo usa el plan gratis.</p>
-          <button type="button" onClick={() => go('/premium')} className="text-[13px] font-semibold text-accent underline-offset-4 hover:underline">Ver Premium</button>
+          <button type="button" onClick={() => go('/premium')} className="text-[13px] font-semibold text-accent-ink underline-offset-4 hover:underline">Ver Premium</button>
         </div>
       ) : (
         <form onSubmit={submit} className="mt-3 shrink-0">

@@ -20,13 +20,13 @@ function ActionBar({ t, role, uid, onAct, onPrompt }) {
   );
   if (role === 'docente') return box('bg-hov ring-line', <span className="inline-flex items-center gap-2"><Lock className="h-3.5 w-3.5" />Vista de docente: solo lectura.</span>);
   if (!t.assignee && t.status !== 'lista') return box('bg-hov ring-line', 'Esta tarea no tiene responsable.', <Btn kind="primary" size="sm" onClick={() => onAct('tomar')}><UserPlus className="h-4 w-4" />Tomar tarea</Btn>);
-  if (mine && !t.accepted) return box('bg-amber/[.07] ring-amber/20', 'Te asignaron esta tarea. ¿La tomas?', <>
+  if (mine && !t.accepted) return box('bg-accent/[.06] ring-accent/25', 'Te asignaron esta tarea. ¿La tomas?', <>
     <Btn kind="secondary" size="sm" onClick={() => onPrompt('rechazar')}><Hand className="h-4 w-4" />No puedo</Btn>
     <Btn kind="primary" size="sm" onClick={() => onAct('aceptar')}><Check className="sw-bold h-4 w-4" />Aceptar tarea</Btn></>);
-  if (t.status === 'en_revision' && !mine && (role === 'revisor' || role === 'coordinador')) return box('bg-violet/[.07] ring-violet/20', 'Te toca revisar esta entrega.', <>
+  if (t.status === 'en_revision' && !mine && (role === 'revisor' || role === 'coordinador')) return box('bg-st-progress/[.08] ring-st-progress/30', 'Te toca revisar esta entrega.', <>
     <Btn kind="secondary" size="sm" onClick={() => onPrompt('pedir_cambios')}><Pencil className="h-4 w-4" />Pedir cambios</Btn>
     <Btn kind="primary" size="sm" onClick={() => onAct('aprobar')}><CheckCheck className="h-4 w-4" />Aprobar entrega</Btn></>);
-  if (t.status === 'en_revision' && mine) return box('bg-violet/[.07] ring-violet/20', 'Entregaste. Falta que alguien de revisión o coordinación la apruebe.');
+  if (t.status === 'en_revision' && mine) return box('bg-st-progress/[.08] ring-st-progress/30', 'Entregaste. Falta que alguien de revisión o coordinación la apruebe.');
   if (t.status === 'bloqueada' && (mine || role === 'coordinador')) return box('bg-red/[.07] ring-red/20', <>Bloqueada: {t.blocked_reason || 'sin motivo'}</>,
     <Btn kind="secondary" size="sm" onClick={() => onAct('desbloquear')}><Play className="h-4 w-4" />Quitar bloqueo</Btn>);
   if (mine && t.status === 'pendiente') return box('bg-hov ring-line', 'Aceptaste esta tarea. Avísale al grupo cuando empieces.', <>
@@ -81,7 +81,7 @@ export default function TaskDrawer({ taskId, onClose }) {
       <button type="button" tabIndex={-1} aria-label="Cerrar panel" onClick={onClose} className={`absolute inset-0 bg-overlay transition-opacity duration-300 ${open ? 'opacity-100' : 'opacity-0'}`} />
       <aside role="dialog" aria-modal="true" aria-labelledby="dr-title" inert={open ? undefined : ''}
              onKeyDown={(e) => { if (e.key === 'Escape' && !prompt) { e.stopPropagation(); onClose(); } }}
-             className={`absolute inset-y-0 right-0 flex w-full flex-col border-l border-line bg-canvas shadow-pop transition-transform duration-300 ease-[cubic-bezier(.2,.8,.2,1)] sm:w-[min(100%,580px)] lg:w-[42vw] lg:min-w-[500px] ${open ? 'translate-x-0' : 'translate-x-full'}`}
+             className={`absolute inset-y-0 right-0 flex w-full flex-col border-l border-line bg-canvas shadow-pop transition-[transform,visibility] duration-300 ease-[cubic-bezier(.2,.8,.2,1)] sm:w-[min(100%,580px)] lg:w-[42vw] lg:min-w-[500px] ${open ? 'visible translate-x-0' : 'invisible translate-x-full'}`}
              style={{ paddingRight: 'env(safe-area-inset-right, 0px)', paddingTop: 'env(safe-area-inset-top, 0px)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
         <header className="flex h-14 shrink-0 items-center gap-2 border-b border-line px-5">
           {p && <>
@@ -165,7 +165,7 @@ export default function TaskDrawer({ taskId, onClose }) {
                 {(t.kind || t.phase || t.origin === 'ia' || t.origin === 'formato') && <>
                   <dt className="text-fg-2">Plan</dt>
                   <dd className="flex flex-wrap items-center gap-1.5 text-[13px]">
-                    {t.kind && <span className={`rounded px-1.5 py-0.5 ring-1 ring-inset ${t.kind === 'sugerencia' ? 'text-violet ring-violet/30' : 'ring-line'}`}>{KINDS[t.kind]}</span>}
+                    {t.kind && <span className={`rounded px-1.5 py-0.5 ring-1 ring-inset ${t.kind === 'sugerencia' ? 'text-accent-ink ring-accent/30' : 'ring-line'}`}>{KINDS[t.kind]}</span>}
                     {t.phase && PHASES[t.phase] && <span className="rounded px-1.5 py-0.5 ring-1 ring-inset ring-line">{PHASES[t.phase].label}</span>}
                     {t.origin === 'ia' && <span className="text-fg-2">Propuesta con IA</span>}
                     {t.origin === 'formato' && <span className="text-fg-2">Detectada por formato</span>}
@@ -187,7 +187,7 @@ export default function TaskDrawer({ taskId, onClose }) {
 
                 {t.delivery_url && <>
                   <dt className="text-fg-2">Entrega</dt>
-                  <dd><a href={t.delivery_url} target="_blank" rel="noopener noreferrer" className="inline-flex max-w-full items-center gap-1.5 truncate text-accent underline-offset-4 hover:underline"><Link2 className="h-3.5 w-3.5 shrink-0" /><span className="truncate">{t.delivery_url}</span><ExternalLink className="h-3 w-3 shrink-0" /></a></dd>
+                  <dd><a href={t.delivery_url} target="_blank" rel="noopener noreferrer" className="inline-flex max-w-full items-center gap-1.5 truncate text-accent-ink underline-offset-4 hover:underline"><Link2 className="h-3.5 w-3.5 shrink-0" /><span className="truncate">{t.delivery_url}</span><ExternalLink className="h-3 w-3 shrink-0" /></a></dd>
                 </>}
               </dl>
 

@@ -2,10 +2,11 @@ import { Plus, Archive, Sparkles } from 'lucide-react';
 import { useApp } from '../lib/store';
 import { go } from '../lib/router';
 import { ROLES, fmtDay, relDays, initials, isPremium } from '../lib/format';
-import { AvatarStack, Chip, Spinner, Dot } from '../components/ui';
+import { AvatarStack, Chip, Spinner, Dot, StageRail } from '../components/ui';
+import { projectStages } from '../lib/center';
 
 export default function ProjectsPage({ onNew }) {
-  const { projects, tasks, membersOf, uid, loaded } = useApp();
+  const { projects, tasks, membersOf, uid, loaded, checkpoints } = useApp();
   if (!loaded) return <Spinner />;
   const groups = [['Activos', projects.filter((p) => p.status === 'activo')], ['Archivados', projects.filter((p) => p.status !== 'activo')]];
   return (
@@ -18,7 +19,7 @@ export default function ProjectsPage({ onNew }) {
               const ts = tasks.filter((t) => t.project_id === p.id);
               const done = ts.filter((t) => t.status === 'lista').length;
               const blocked = ts.filter((t) => t.status === 'bloqueada').length;
-              const pct = ts.length ? Math.round((done / ts.length) * 100) : 0;
+              const st = projectStages({ project: p, tasks: ts, members: membersOf(p.id), checkpoints: checkpoints.filter((c) => c.project_id === p.id) });
               return (
                 <button key={p.id} type="button" onClick={() => go(`/p/${p.id}`)}
                         className={`group flex flex-col rounded-xl bg-card p-6 text-left shadow-xs ring-1 ring-inset ring-line transition-all duration-200 hover:-translate-y-0.5 hover:ring-fg-3/40 ${gi ? 'opacity-75' : ''}`}>
@@ -31,9 +32,9 @@ export default function ProjectsPage({ onNew }) {
                   </span>
                   <span className="mt-4 text-[15px] font-semibold leading-snug">{p.name}</span>
                   <span className="mt-0.5 text-[12.5px] text-fg-2">{p.course || 'Sin curso'}, {ROLES[p.myRole].short.toLowerCase()}</span>
-                  <span className="mt-5 block h-1.5 overflow-hidden rounded-full bg-hov2"><span className="block h-full rounded-full bg-fg" style={{ width: `${pct}%` }} /></span>
+                  <span className="mt-5 block"><StageRail compact stages={st.stages} /></span>
                   <span className="mt-3 flex items-center justify-between gap-3 text-[12px] text-fg-2">
-                    <span>{ts.length ? `${done} de ${ts.length} listas` : 'Sin tareas'}{p.due_date ? `, entrega ${fmtDay(p.due_date)} (${relDays(p.due_date)})` : ''}</span>
+                    <span>{ts.length ? `${done} de ${ts.length} aprobadas` : 'Sin tareas'}{p.due_date ? `, entrega ${fmtDay(p.due_date)} (${relDays(p.due_date)})` : ''}</span>
                     <AvatarStack ring="card" people={membersOf(p.id).map((m) => ({ id: m.user_id, name: m.profile?.display_name || '?', me: m.user_id === uid }))} />
                   </span>
                 </button>

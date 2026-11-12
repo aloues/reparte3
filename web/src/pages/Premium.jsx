@@ -22,7 +22,7 @@ export default function PremiumPage() {
         <Chip tone="accent"><Sparkles className="h-3 w-3" />Gratis durante el lanzamiento</Chip>
         <h2 className="relative mt-4 max-w-xl text-[30px] font-semibold leading-[1.15] tracking-[-0.03em]" style={{ textWrap: 'balance' }}>Todo el trabajo en grupo, sin depender del chat de WhatsApp</h2>
         <p className="relative mt-3 max-w-xl text-[15px] leading-relaxed text-fg-2">Por ahora Premium está activo sin costo en todos los grupos. Cuando empecemos a cobrar, el pago será por grupo y lo avisaremos con anticipación dentro de la app.</p>
-        {premium.length > 0 && <p className="relative mt-5 flex items-center gap-2 text-[13.5px]"><Check className="sw-bold h-4 w-4 text-accent" />Activo en {premium.length} {premium.length === 1 ? 'grupo tuyo' : 'grupos tuyos'}.</p>}
+        {premium.length > 0 && <p className="relative mt-5 flex items-center gap-2 text-[13.5px]"><Check className="sw-bold h-4 w-4 text-accent-ink" />Activo en {premium.length} {premium.length === 1 ? 'grupo tuyo' : 'grupos tuyos'}.</p>}
       </section>
       <ul className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {FEATURES.map(([I, t, x]) => (

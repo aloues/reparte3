@@ -20,9 +20,9 @@ export default function JoinPage({ code }) {
         <span className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-orange/10 text-orange"><AlertTriangle className="h-5 w-5" /></span>
         <h2 className="mt-5 text-[22px] font-semibold tracking-[-0.02em]">Este enlace ya no sirve</h2>
         <p className="mt-2 text-[14px] text-fg-2">{info ? `La invitación a «${info.project_name}» venció o se desactivó.` : 'No encontramos esta invitación.'} Pide un enlace nuevo a quien coordina el grupo.</p>
-        <Btn className="mt-6" onClick={() => go('/')}>Ir al inicio</Btn>
+        <Btn className="mt-6" onClick={() => go('/')}>Ir a Hoy</Btn>
       </> : <>
-        <span className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-accent/10 text-accent"><Users className="h-5 w-5" /></span>
+        <span className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-accent/10 text-accent-ink"><Users className="h-5 w-5" /></span>
         <p className="mt-5 text-[13.5px] text-fg-2">Te invitaron a</p>
         <h2 className="mt-1 text-[24px] font-semibold tracking-[-0.025em]" style={{ textWrap: 'balance' }}>{info.project_name}</h2>
         <p className="mt-2 text-[14px] text-fg-2">{info.course ? `${info.course}, ` : ''}{info.members} {info.members === 1 ? 'persona' : 'personas'} en el grupo</p>

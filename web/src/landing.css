@@ -1,0 +1,137 @@
+/* Landing de Reparte3: «la hoja de consigna» y «la regla» de los 4 tiempos.
+   Solo la usa pages/Landing.jsx. Todo sale de los tokens de index.css (grises zinc, un acento, estados). */
+
+/* ---------- Superficie: renglones cada 28 px y línea de margen en acento ---------- */
+.lp-ruled { background-color: rgb(var(--canvas));
+  background-image: repeating-linear-gradient(to bottom, transparent 0 27px, rgb(var(--fg) / .045) 27px 28px); }
+.lp-sunk { background-color: rgb(var(--sunk)); }
+.lp-plain { background-color: rgb(var(--canvas)); }
+.lp-sheet { position: relative; isolation: isolate; }
+@media (min-width: 1024px) {
+  /* El contenido empieza en max((100% - 1200px) / 2, 0) + 40 px; el margen queda 14 px antes del texto sangrado. */
+  .lp-sheet::before { content: ""; position: absolute; top: 0; bottom: 0; z-index: -1; width: 1px; pointer-events: none;
+    left: calc(max((100% - 1200px) / 2, 0px) + 40px + 30px); background: rgb(var(--accent) / .22); }
+  .lp-indent { padding-left: 44px; }
+}
+
+/* ---------- Hero: titular escrito como consigna numerada ---------- */
+.lp-title { display: flex; flex-direction: column; gap: .04em; margin: 0;
+  font-size: clamp(34px, 9vw, 58px); font-weight: 650; line-height: 1.04; letter-spacing: -0.04em; }
+@media (min-width: 1024px) { .lp-title { font-size: clamp(46px, 4.3vw, 60px); } }
+.lp-line { display: grid; grid-template-columns: .62em minmax(0, 1fr); align-items: baseline; white-space: nowrap; }
+.lp-n { font-family: "Geist Mono", ui-monospace, monospace; font-size: .26em; font-weight: 400; letter-spacing: 0;
+  font-variant-numeric: tabular-nums; color: rgb(var(--fg-2)); transform: translateY(-.35em); }
+@media (min-width: 1024px) {
+  .lp-line { grid-template-columns: 44px minmax(0, 1fr); }
+  .lp-n { text-align: right; padding-right: 24px; }
+}
+.lp-h2 { font-size: clamp(28px, 6.4vw, 40px); font-weight: 650; line-height: 1.1; letter-spacing: -0.03em; text-wrap: balance; }
+
+/* ---------- La regla compacta (demo del hero y cabecera del proyecto) ---------- */
+.lp-cr { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); column-gap: 6px; }
+.lp-cr-seg { display: flex; min-height: 44px; min-width: 0; flex-direction: column; justify-content: flex-end; gap: 8px;
+  padding: 6px 0 0; border: 0; background: none; text-align: left; font: inherit; font-size: 12.5px; color: rgb(var(--fg-2));
+  border-radius: 6px; transition: color .25s cubic-bezier(.2,.8,.2,1); }
+button.lp-cr-seg { cursor: pointer; }
+button.lp-cr-seg:hover { color: rgb(var(--fg)); }
+@media (min-width: 640px) { .lp-cr-seg { font-size: 13px; } }
+.lp-cr-label { display: flex; min-width: 0; align-items: center; gap: 6px; white-space: nowrap; overflow: hidden; }
+.lp-cr-n { font-family: "Geist Mono", ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+.lp-cr-track { position: relative; height: 2px; overflow: hidden; border-radius: 2px; background: rgb(var(--line) / var(--line-a)); }
+.lp-cr-fill { position: absolute; inset: 0; transform: scaleX(0); transform-origin: left; background: rgb(var(--accent));
+  transition: transform .45s cubic-bezier(.2,.8,.2,1), background-color .3s cubic-bezier(.2,.8,.2,1); }
+.lp-cr-seg[data-state="current"] { color: rgb(var(--fg)); font-weight: 550; }
+.lp-cr-seg[data-state="current"] .lp-cr-n { color: rgb(var(--accent)); }
+.lp-cr-seg[data-state="current"] .lp-cr-fill { transform: scaleX(1); }
+.lp-cr-seg[data-state="done"] { color: rgb(var(--fg-2)); }
+.lp-cr-seg[data-state="done"] .lp-cr-fill { transform: scaleX(1); background: rgb(var(--fg)); }
+.lp-cr-fill.is-timing { animation: lp-grow var(--dur, 2.8s) linear both; }
+
+/* ---------- La regla grande: los 4 tiempos ----------
+   Celular y tableta: vertical, el número va al margen y la pista baja junto a cada tiempo.
+   Escritorio: horizontal, cuatro números sobre una pista de 2 px dividida en cuatro tramos. */
+.lp-rule { display: grid; margin: 0; padding: 0; list-style: none; }
+.lp-t { display: grid; grid-template-columns: 52px minmax(0, 1fr); grid-template-rows: auto auto 1fr;
+  grid-template-areas: "num text" "seg text" "seg frag"; column-gap: 14px; }
+.lp-t-num { grid-area: num; display: inline-flex; align-items: flex-start; gap: 4px; min-height: 48px; padding: 0; border: 0; background: none;
+  cursor: pointer; border-radius: 8px; font-family: "Geist Mono", ui-monospace, monospace; font-variant-numeric: tabular-nums;
+  font-size: 44px; font-weight: 400; line-height: 1; letter-spacing: -0.04em; color: rgb(var(--fg-2) / .75);
+  transition: color .3s cubic-bezier(.2,.8,.2,1); }
+.lp-t-num:hover { color: rgb(var(--fg-2)); }
+/* Pendiente: gris a 3:1 o más (texto grande); hecho = fg con ✓; actual = acento. */
+.lp-t-check { height: 18px; width: 18px; margin-top: 3px; opacity: 0; transform: scale(.5);
+  transition: opacity .25s cubic-bezier(.2,.8,.2,1), transform .35s cubic-bezier(.2,.8,.2,1); }
+.lp-t-seg { grid-area: seg; position: relative; justify-self: start; width: 2px; margin: 10px 0 10px 12px; overflow: hidden;
+  border-radius: 2px; background: rgb(var(--line) / var(--line-a)); }
+.lp-t-fill { position: absolute; inset: 0; transform: scaleY(0); transform-origin: top; background: rgb(var(--accent));
+  transition: transform .6s cubic-bezier(.2,.8,.2,1), background-color .3s cubic-bezier(.2,.8,.2,1); }
+.lp-t-text { grid-area: text; min-width: 0; padding-top: 4px; }
+.lp-t-frag { grid-area: frag; min-width: 0; padding: 20px 0 48px; }
+.lp-t:last-child .lp-t-frag { padding-bottom: 8px; }
+@media (min-width: 768px) and (max-width: 1023.98px) {
+  .lp-t { grid-template-columns: 52px minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: auto 1fr;
+    grid-template-areas: "num text frag" "seg text frag"; column-gap: 28px; }
+  .lp-t-num { justify-self: start; }
+  .lp-t-text { padding-bottom: 52px; }
+  .lp-t-frag { padding-top: 6px; }
+  .lp-t:last-child .lp-t-text { padding-bottom: 8px; }
+}
+.lp-t[data-state="current"] .lp-t-num { color: rgb(var(--accent)); }
+.lp-t[data-state="current"] .lp-t-fill { transform: scaleY(1); }
+.lp-t[data-state="done"] .lp-t-num { color: rgb(var(--fg)); }
+.lp-t[data-state="done"] .lp-t-fill { transform: scaleY(1); background: rgb(var(--fg)); }
+.lp-t[data-state="done"] .lp-t-check { opacity: 1; transform: none; }
+@media (min-width: 1024px) {
+  /* Subgrid: los cuatro textos y los cuatro fragmentos quedan alineados en la misma fila. */
+  .lp-rule { grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: repeat(4, auto); column-gap: 28px; }
+  .lp-t { grid-row: span 4; grid-template-columns: minmax(0, 1fr); grid-template-rows: subgrid;
+    grid-template-areas: "num" "seg" "text" "frag"; }
+  .lp-t-text { padding: 0 0 22px; }
+  .lp-t-frag, .lp-t:last-child .lp-t-frag { padding: 0; }
+  .lp-t-num { justify-self: start; min-height: 64px; font-size: 64px; }
+  .lp-t-check { height: 20px; width: 20px; margin-top: 6px; }
+  .lp-t-seg { justify-self: stretch; width: auto; height: 2px; margin: 16px -22px 28px 0; }
+  .lp-t:last-child .lp-t-seg { margin-right: 0; }
+  .lp-t-fill { transform: scaleX(0); transform-origin: left; }
+  .lp-t[data-state="current"] .lp-t-fill, .lp-t[data-state="done"] .lp-t-fill { transform: scaleX(1); }
+}
+.lp-legend-line { display: inline-block; height: 2px; width: 18px; border-radius: 2px; vertical-align: middle; }
+
+/* ---------- Estados: color + palabra, nunca color solo ---------- */
+.lp-st { display: inline-flex; flex-shrink: 0; align-items: center; gap: 6px; border-radius: 6px; padding: 1px 8px 1px 7px;
+  font-size: 12px; font-weight: 500; line-height: 20px; white-space: nowrap; color: rgb(var(--fg)); background: rgb(var(--st-todo-bg)); }
+.lp-st::before { content: ""; height: 7px; width: 7px; flex-shrink: 0; border-radius: 9999px; background: rgb(var(--st-todo)); }
+.lp-st-done { background: rgb(var(--st-done-bg)); } .lp-st-done::before { background: rgb(var(--st-done)); }
+.lp-st-progress { background: rgb(var(--st-progress-bg)); } .lp-st-progress::before { background: rgb(var(--st-progress)); }
+.lp-st-blocked { background: rgb(var(--st-blocked-bg)); } .lp-st-blocked::before { background: rgb(var(--st-blocked)); }
+.lp-st-risk { background: transparent; box-shadow: inset 0 0 0 1.5px rgb(var(--st-progress)); }
+.lp-st-risk::before { background: rgb(var(--st-progress)); }
+.lp-done-bar { background: rgb(var(--st-done)); }
+
+/* ---------- Papeles: consigna rayada con margen, mapa con puntos ---------- */
+.lp-paper { background-image:
+    linear-gradient(rgb(var(--accent) / .3), rgb(var(--accent) / .3)),
+    repeating-linear-gradient(to bottom, transparent 0 27px, rgb(var(--fg) / .06) 27px 28px);
+  background-size: 1px 100%, auto; background-position: 29px 0, 0 0; background-repeat: no-repeat, repeat; }
+.lp-dots { background-color: rgb(var(--sunk));
+  background-image: radial-gradient(rgb(var(--fg) / .16) 1px, transparent 1.3px); background-size: 16px 16px; }
+
+/* ---------- Movimiento: respuestas cortas, ease-out; reduced-motion lo apaga ---------- */
+@keyframes lp-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes lp-grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.lp-rise { animation: lp-rise .6s cubic-bezier(.2,.8,.2,1) both; }
+.lp-enter { animation: lp-rise .3s cubic-bezier(.2,.8,.2,1) both; }
+.lp-bar { transform-origin: left; animation: lp-grow .7s cubic-bezier(.2,.8,.2,1) both; }
+.lp-mark { transition: background-color .5s cubic-bezier(.2,.8,.2,1), color .5s cubic-bezier(.2,.8,.2,1); }
+.lp-tag { transition: opacity .4s cubic-bezier(.2,.8,.2,1); }
+@media (prefers-reduced-motion: reduce) {
+  .lp-rise, .lp-enter, .lp-bar, .lp-cr-fill, .lp-cr-fill.is-timing { animation: none !important; }
+  .lp-t-num, .lp-t-check, .lp-t-fill, .lp-cr-seg, .lp-cr-fill, .lp-mark, .lp-tag { transition: none !important; }
+}
+
+/* Acento como texto pequeño: en oscuro se aclara para llegar a AA (el relleno de botones y pistas no cambia). */
+:root { --lp-accent-ink: var(--accent); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --lp-accent-ink: 133 160 255; } }
+:root[data-theme="dark"] { --lp-accent-ink: 133 160 255; }
+.lp-accent-ink { color: rgb(var(--lp-accent-ink)); }
+.lp-cr-seg[data-state="current"] .lp-cr-n { color: rgb(var(--lp-accent-ink)); }
